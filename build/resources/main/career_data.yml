@@ -1,0 +1,1109 @@
+# ============================================================================
+# StarLightRe 职业生涯系统2.0 — 完整技能与顿悟数据
+# 来源：繁星工坊：新大陆 生涯系统2.0信息表.xlsx
+# ============================================================================
+
+careers:
+  # ===== 建筑师 Architect =====
+  ARCHITECT:
+    branches:
+      # --- 结构工程师 ---
+      ARCHITECT_STRUCTURE:
+        skills:
+          - id: "architect_structure_skill_0"
+            name: "高效回收"
+            type: PASSIVE
+            icon: "PAPER"
+            levels:
+              - "打火石时必定成功；减少20%爆炸伤害。"
+              - "获得掉落物"
+              - "获得掉落物"
+          - id: "architect_structure_skill_1"
+            name: "识色敏锐"
+            type: ACTIVE
+            icon: "RED_DYE"
+            cooldown: [20, 20, 20]
+            levels:
+              - "1个同种染色方块"
+              - "此技能CD-5"
+              - "2个同种染色方块"
+          - id: "architect_structure_skill_2"
+            name: "凌空创想"
+            type: ACTIVE
+            icon: "WHITE_DYE"
+            cooldown: [300, 300, 300]
+            levels:
+              - "持续3分钟。获得速度I，在脚手架上行动时持续获得3秒的速度II、跳跃提升I、抗性提升I"
+              - "持续4分钟。获得速度I，在脚手架上行动时持续获得3秒的速度II、跳跃提升II、抗性提升II"
+              - "持续5分钟。获得速度II、抗性提升I，在脚手架上行动时持续获得3秒的速度III、跳跃提升III、抗性提升III"
+        eurekas:
+          - id: "architect_structure_eureka_0"
+            name: "奇珍颜料"
+            icon: "PURPLE_DYE"
+            cooldown: 60
+            description: "1个相应的染料"
+          - id: "architect_structure_eureka_1"
+            name: "凝固剂"
+            icon: "SLIME_BALL"
+            cooldown: 100
+            description: "混凝土粉末→（相应颜色的）混凝土"
+          - id: "architect_structure_eureka_2"
+            name: "主世界的建造者"
+            icon: "GRASS_BLOCK"
+            cooldown: 0
+            description: "仅当自身拥有【建筑师】职业下的另一个分支时触发且仅触发一次：立即获得3技能点"
+      # --- 堡垒工程师 ---
+      ARCHITECT_FORTRESS:
+        skills:
+          - id: "architect_fortress_skill_0"
+            name: "缓冲装置"
+            type: PASSIVE
+            icon: "GOLDEN_BOOTS"
+            levels:
+              - "减少40%摔落伤害"
+              - "减少60%摔落伤害"
+              - "受到摔落伤害时有20%概率免伤"
+          - id: "architect_fortress_skill_1"
+            name: "庇护寻求"
+            type: ACTIVE
+            icon: "SHULKER_SHELL"
+            cooldown: [30, 30, 30]
+            levels:
+              - "持续4秒。受到的生命值损失-2，若周围4格内存在各类砖块，则受到的生命值损失额外-1"
+              - "持续5秒。受到的生命值损失-3，若周围4格内存在各类砖块，则受到的生命值损失额外-1"
+              - "持续6秒。受到的生命值损失-4，若周围4格内存在各类砖块，则受到的生命值损失额外-2"
+          - id: "architect_fortress_skill_2"
+            name: "铁壁力场"
+            type: ACTIVE
+            icon: "CHISELED_STONE_BRICKS"
+            cooldown: [260, 260, 260]
+            levels:
+              - "持续20秒。周围16格内所有的各类砖块、各类墙、铁栏杆无法被破坏"
+              - "持续30秒。周围24格内所有红砖块、各类石砖、各类墙、铁栏杆无法被破坏"
+              - "持续40秒。周围32格内所有红砖块、各类石砖、各类墙、铁栏杆无法被破坏"
+        eurekas:
+          - id: "architect_fortress_eureka_0"
+            name: "重力轰击"
+            icon: "NETHERITE_BOOTS"
+            cooldown: 0
+            description: "受到摔落伤害时，2格内的所有玩家同样受到此伤害（触发技能1的免伤时不触发，触发技能1的伤害减免时按减免后的伤害结算）"
+          - id: "architect_fortress_eureka_1"
+            name: "淬炼固化"
+            icon: "OBSIDIAN"
+            cooldown: 0
+            description: "在指针位置5格召唤两堵8*1*3的十字黑曜石墙，15秒后黑曜石墙自动摧毁（黑曜石墙仅可替换空气方块，若遇其他方块则不会替换之）"
+          - id: "architect_fortress_eureka_2"
+            name: "便携式切石机"
+            icon: "STONECUTTER"
+            cooldown: 0
+            description: "可随时打开切石机面板"
+      # --- 交通工程师 ---
+      ARCHITECT_TRAFFIC:
+        skills:
+          - id: "architect_traffic_skill_0"
+            name: "路线规划"
+            type: PASSIVE
+            icon: "DETECTOR_RAIL"
+            levels:
+              - "不消耗方块"
+              - "不消耗方块"
+              - "不消耗方块"
+          - id: "architect_traffic_skill_1"
+            name: "追加动力"
+            type: ACTIVE
+            icon: "FIREWORK_ROCKET"
+            cooldown: [45, 45, 45]
+            levels:
+              - "持续5秒。乘坐矿车、各类船、各类运输船时以上运输工具的速度+30%"
+              - "持续5秒。乘坐矿车、各类船、各类运输船时以上运输工具的速度+40%"
+              - "持续5秒。乘坐矿车、各类船、各类运输船时以上运输工具的速度+50%"
+          - id: "architect_traffic_skill_2"
+            name: "备用载具"
+            type: ACTIVE
+            icon: "OAK_BOAT"
+            cooldown: [360, 360, 360]
+            levels:
+              - "位于水中时，在原地召唤一艘船（随机材质）"
+              - "（同时位于水中时，改为触发lvl.1效果）"
+              - "此技能CD-60"
+        eurekas:
+          - id: "architect_traffic_eureka_0"
+            name: "下界开路者"
+            icon: "NETHERRACK"
+            cooldown: 0
+            description: "不消耗方块"
+          - id: "architect_traffic_eureka_1"
+            name: "精炼钢轨"
+            icon: "POWERED_RAIL"
+            cooldown: 0
+            description: "①4铁锭（位于四角）+1木棍（中心）→16铁轨；②6铜锭（左右两列）+1木棍（中心）→16铁轨（摆放样式同原铁轨合成样式）"
+          - id: "architect_traffic_eureka_2"
+            name: "游弋信风"
+            icon: "HEART_OF_THE_SEA"
+            cooldown: 0
+            description: "获得30秒的海豚的恩惠II；如果位于海洋生物群系，则改为获得45秒的海豚的恩惠III"
+      # --- 爆破师 ---
+      ARCHITECT_DEMOLITION:
+        skills:
+          - id: "architect_demolition_skill_0"
+            name: "稳定三硝基甲苯"
+            type: PASSIVE
+            icon: "GUNPOWDER"
+            levels:
+              - "失败时有25%概率以合成台为中心产生一次爆炸"
+              - "失败时有10%概率以合成台为中心产生一次爆炸"
+              - "合成TNT、TNT矿车时必定成功"
+          - id: "architect_demolition_skill_1"
+            name: "气浪行者"
+            type: ACTIVE
+            icon: "CHAINMAIL_BOOTS"
+            cooldown: [15, 15, 15]
+            levels:
+              - "持续3秒。减少50%爆炸伤害"
+              - "持续4秒。减少65%爆炸伤害"
+              - "持续5秒。减少80%爆炸伤害"
+          - id: "architect_demolition_skill_2"
+            name: "前沿爆破线"
+            type: ACTIVE
+            icon: "FIRE_CHARGE"
+            cooldown: [20, 20, 20]
+            levels:
+              - "向前方投掷出3个已点燃的TNT，这些TNT不会破坏方块"
+              - "向前方投掷出4个已点燃的TNT，这些TNT不会破坏方块"
+              - "向前方投掷出5个已点燃的TNT，这些TNT不会破坏方块"
+        eurekas:
+          - id: "architect_demolition_eureka_0"
+            name: "精炼炸药"
+            icon: "GHAST_TEAR"
+            cooldown: 0
+            description: "1个额外的TNT或TNT矿车"
+          - id: "architect_demolition_eureka_1"
+            name: "末影硝酸甘油"
+            icon: "END_CRYSTAL"
+            cooldown: 0
+            description: "6玻璃块（位于最左与最右列）+3TNT→末地水晶"
+          - id: "architect_demolition_eureka_2"
+            name: "手摇TNT火炮"
+            icon: "TIPPED_ARROW"
+            cooldown: 0
+            description: "持续30秒。期间使用弓射出的每一箭都将变为已点燃的TNT。这些TNT不会破坏方块"
+
+  # ===== 厨师 Chef =====
+  CHEF:
+    branches:
+      # --- 药剂师 ---
+      CHEF_BREWER:
+        skills:
+          - id: "chef_brewer_skill_0"
+            name: "熟练配制"
+            type: PASSIVE
+            icon: "BREWING_STAND"
+            levels:
+              - "周围6格内酿造台，未加入红石粉的药水持续时间+20s；加入红石粉的药水持续时间+30s"
+              - "周围6格内酿造台，未加入红石粉的药水持续时间+20s；加入红石粉的药水持续时间+40s"
+              - "周围6格内酿造台，未加入红石粉的药水持续时间+40s；加入红石粉的药水持续时间+60s"
+          - id: "chef_brewer_skill_1"
+            name: "蒸发控件"
+            type: ACTIVE
+            icon: "BLAZE_POWDER"
+            cooldown: [90, 90, 90]
+            levels:
+              - "持续60秒。周围2格内酿造台完成每次酿造时，有10%概率掉落1个烈焰粉"
+              - "持续60秒。周围2格内酿造台完成每次酿造时，有20%概率掉落1个烈焰粉"
+              - "持续60秒。周围3格内酿造台完成每次酿造时，有30%概率掉落1个烈焰粉"
+          - id: "chef_brewer_skill_2"
+            name: "肾上腺素注射"
+            type: ACTIVE
+            icon: "DRAGON_BREATH"
+            cooldown: [600, 600, 600]
+            levels:
+              - "仅当不携带不死图腾时触发。下次喷溅型治疗药水II时，为受影响的每个玩家赋予8秒抗火I、20秒生命恢复I、3秒伤害吸收I"
+              - "仅当不携带不死图腾时触发。下次喷溅型治疗药水II时，为受影响的每个玩家赋予12秒抗火I、25秒生命恢复II、4秒伤害吸收II"
+              - "仅当不携带不死图腾时触发。下次喷溅型治疗药水II时，为受影响的每个玩家赋予20秒抗火I、30秒生命恢复II、5秒伤害吸收III"
+        eurekas:
+          - id: "chef_brewer_eureka_0"
+            name: "下界原住民"
+            icon: "NETHER_WART"
+            cooldown: 120
+            description: "玻璃瓶+下界疣*3→粗制的药水"
+          - id: "chef_brewer_eureka_1"
+            name: "过量服用"
+            icon: "FERMENTED_SPIDER_EYE"
+            cooldown: 0
+            description: "持续60秒。立即使自身目前所有的状态效果等级+1，技能结束后获得8秒中毒II"
+          - id: "chef_brewer_eureka_2"
+            name: "战地药剂师"
+            icon: "SLIME_BALL"
+            cooldown: 0
+            description: "玻璃瓶+下界疣*2+火药→粗制的喷溅型药水"
+      # --- 烘焙师 ---
+      CHEF_BAKER:
+        skills:
+          - id: "chef_baker_skill_0"
+            name: "预热烤箱"
+            type: PASSIVE
+            icon: "PUMPKIN_PIE"
+            levels:
+              - "合成烘焙食品和汤煲食品时成功概率提升至90%"
+              - "合成烘焙食品和汤煲食品时必定成功"
+              - "1个相应的物品"
+          - id: "chef_baker_skill_1"
+            name: "文火慢炖"
+            type: ACTIVE
+            icon: "MUSHROOM_STEW"
+            cooldown: [600, 600, 600]
+            levels:
+              - "下次合成汤煲食品时额外获得1个随机汤煲食品"
+              - "此技能CD-15"
+              - "若合成的是谜之炖菜，则改为获得2个随机谜之炖菜"
+          - id: "chef_baker_skill_2"
+            name: "甜点派对"
+            type: ACTIVE
+            icon: "CAKE"
+            cooldown: [450, 450, 450]
+            levels:
+              - "立即在自身周围4格内某一随机位置召唤1个蛋糕。自身周围4格内每有3名其他玩家则额外召唤1个蛋糕，最多额外召唤2个"
+              - "立即在自身周围4格内某一随机位置召唤1个蛋糕。自身周围4格内每有2名其他玩家则额外召唤1个蛋糕，最多额外召唤3个"
+              - "立即在自身周围4格内某两个随机位置召唤2个蛋糕。自身周围4格内每有2名其他玩家则额外召唤1个蛋糕，最多额外召唤4个"
+        eurekas:
+          - id: "chef_baker_eureka_0"
+            name: "法棍"
+            icon: "STICK"
+            cooldown: 0
+            description: "使用面包攻击时为对方赋予15秒反胃II和5秒黑暗，且有20%概率造成2点真实伤害（无视护甲）"
+          - id: "chef_baker_eureka_1"
+            name: "糖霜"
+            icon: "SUGAR"
+            cooldown: 0
+            description: "仅当饥饿值小于20时触发。消耗物品栏中的1个糖，回复1饥饿值"
+          - id: "chef_baker_eureka_2"
+            name: "幸运曲奇"
+            icon: "COOKIE"
+            cooldown: 0
+            description: "合成的每个曲奇均变为幸运曲奇，食用后有20%概率获得幸运I；有5%概率获得幸运II；有0.1%概率获得1个钻石"
+      # --- 屠夫 ---
+      CHEF_BUTCHER:
+        skills:
+          - id: "chef_butcher_skill_0"
+            name: "庖丁遗风"
+            type: PASSIVE
+            icon: "IRON_AXE"
+            levels:
+              - "1个对应的生肉（动物被烧死时不触发）"
+              - "1个对应的生肉（动物被烧死时不触发）"
+              - "1个对应的熟肉"
+          - id: "chef_butcher_skill_1"
+            name: "烤肉专家"
+            type: ACTIVE
+            icon: "COOKED_BEEF"
+            cooldown: [25, 25, 25]
+            levels:
+              - "使周围3格内随机1个营火立即完成烹饪"
+              - "此技能CD-10"
+              - "使周围3格内随机2个营火立即完成烹饪"
+          - id: "chef_butcher_skill_2"
+            name: "困兽天敌"
+            type: ACTIVE
+            icon: "RABBIT_HIDE"
+            cooldown: [450, 450, 450]
+            levels:
+              - "使周围8格内所有陆生动物获得10秒的缓慢I、发光"
+              - "使周围12格内所有陆生动物获得20秒的缓慢II、发光"
+              - "使周围16格内所有陆生动物获得30秒的缓慢III、发光"
+        eurekas:
+          - id: "chef_butcher_eureka_0"
+            name: "血腥屠宰者"
+            icon: "GOLDEN_AXE"
+            cooldown: 0
+            description: "对准某一生物（不能是玩家）使用，使该生物获得60秒的发光和虚弱II；若在期间击杀该生物，则获得25经验值"
+          - id: "chef_butcher_eureka_1"
+            name: "放血"
+            icon: "CHICKEN"
+            cooldown: 0
+            description: "1个对应的生肉"
+          - id: "chef_butcher_eureka_2"
+            name: "追猎"
+            icon: "IRON_HORSE_ARMOR"
+            cooldown: 120
+            description: "+6"
+      # --- 主厨 ---
+      CHEF_MASTER:
+        skills:
+          - id: "chef_master_skill_0"
+            name: "精准火候"
+            type: PASSIVE
+            icon: "SMOKER"
+            levels:
+              - "从炉中取出每个烧好的食物时有10%概率额外获得1个该食物"
+              - "从炉中取出每个烧好的食物时有20%概率额外获得1个该食物"
+              - "从炉中取出每个烧好的食物时有30%概率额外获得1个该食物"
+          - id: "chef_master_skill_1"
+            name: "奇味异珍"
+            type: ACTIVE
+            icon: "CHORUS_FRUIT"
+            cooldown: [120, 120, 120]
+            levels:
+              - "下次食用以下任一食物时，触发相应效果：紫颂果→额外获得4饥饿值+传送；金胡萝卜→使自己和周围4格内所有非敌对玩家获得2饥饿值"
+              - "补充：发光浆果→额外获得2饥饿值+发光和速度II"
+              - "补充：毒马铃薯→额外获得2饥饿值+不中毒+3个马铃薯"
+          - id: "chef_master_skill_2"
+            name: "镀金美馔"
+            type: ACTIVE
+            icon: "GOLD_NUGGET"
+            cooldown: [180, 180, 180]
+            levels:
+              - "下次食用金胡萝卜时：使自己和周围4格内所有非敌对玩家获得2饥饿值"
+              - "补充：金苹果时：使自己和周围4格内所有非敌对玩家获得4饥饿值+2生命值"
+              - "补充：附魔金苹果时：使自己和周围8格内所有非敌对玩家获得6饥饿值+8生命值+30秒抗火和抗性提升I"
+        eurekas:
+          - id: "chef_master_eureka_0"
+            name: "地狱厨房"
+            icon: "COOKED_MUTTON"
+            cooldown: 0
+            description: "8金块+1苹果→附魔金苹果"
+          - id: "chef_master_eureka_1"
+            name: "配方传承"
+            icon: "ENCHANTED_GOLDEN_APPLE"
+            cooldown: 0
+            description: "立即使周围8格内所有【厨师】职业玩家（包括自己）的所有技能（不包括顿悟）CD-20"
+          - id: "chef_master_eureka_2"
+            name: "以厨为师"
+            icon: "APPLE"
+            cooldown: 0
+            description: "仅当自身拥有【厨师】职业下的另一个分支时触发且仅触发一次：立即获得3技能点"
+
+  # ===== 学者 Scholar =====
+  SCHOLAR:
+    branches:
+      # --- 附魔师 ---
+      SCHOLAR_ENCHANTER:
+        skills:
+          - id: "scholar_enchanter_skill_0"
+            name: "注魔宝典"
+            type: PASSIVE
+            icon: "ENCHANTED_BOOK"
+            levels:
+              - "使用附魔台进行附魔时有20%概率使消耗的经验等级-3"
+              - "使用附魔台进行附魔时有40%概率使消耗的经验等级-3"
+              - "使用附魔台进行附魔时有60%概率使消耗的经验等级-3"
+          - id: "scholar_enchanter_skill_1"
+            name: "魔力虹吸"
+            type: ACTIVE
+            icon: "GRINDSTONE"
+            cooldown: [5400, 5400, 5400]
+            levels:
+              - "下次使用砂轮祛魔时，额外获得5经验，且有10%概率回复该物品20%的耐久"
+              - "且有20%概率回复该物品20%的耐久"
+              - "且有30%概率回复该物品20%的耐久"
+          - id: "scholar_enchanter_skill_2"
+            name: "咒术工程"
+            type: ACTIVE
+            icon: "BOOKSHELF"
+            cooldown: [240, 240, 240]
+            levels:
+              - "使手持物品的随机一个魔咒等级+1（完成后的魔咒等级不得超过原版等级上限+1级）；若要升级的魔咒已达原版等级上限，则需要额外花费1技能点"
+              - "此技能CD-900"
+              - "此技能CD额外-900"
+        eurekas:
+          - id: "scholar_enchanter_eureka_0"
+            name: "青金术师"
+            icon: "LAPIS_LAZULI"
+            cooldown: 0
+            description: "8青金石+1玻璃瓶→附魔之瓶"
+          - id: "scholar_enchanter_eureka_1"
+            name: "附魔领域展开"
+            icon: "DIAMOND"
+            cooldown: 0
+            description: "可随时打开30级附魔台面板"
+          - id: "scholar_enchanter_eureka_2"
+            name: "禁术褫夺"
+            icon: "ENDER_EYE"
+            cooldown: 0
+            description: "对准某一玩家使用，使其获得20秒虚弱I；仅触发一次：若期间其被点燃且不具有抗火，则随机去除其任意一件盔甲的所有附魔"
+      # --- 红石工程师 ---
+      SCHOLAR_REDSTONE:
+        skills:
+          - id: "scholar_redstone_skill_0"
+            name: "电路设计"
+            type: PASSIVE
+            icon: "REDSTONE"
+            levels:
+              - "放置红石粉时有4%概率不消耗"
+              - "放置红石粉时有6%概率不消耗"
+              - "放置红石粉时有8%概率不消耗"
+          - id: "scholar_redstone_skill_1"
+            name: "自动化生产"
+            type: ACTIVE
+            icon: "PISTON"
+            cooldown: [240, 240, 240]
+            levels:
+              - "1个产物"
+              - "1个产物"
+              - "1个产物"
+          - id: "scholar_redstone_skill_2"
+            name: "超载"
+            type: ACTIVE
+            icon: "REDSTONE_BLOCK"
+            cooldown: [330, 330, 330]
+            levels:
+              - "持续20秒。立即使自身周围8格内所有红石粉受到15级信号，期间范围内所有站在红石粉上的玩家每秒受到1点伤害"
+              - "持续时间+5"
+              - "持续时间额外+5"
+        eurekas:
+          - id: "scholar_redstone_eureka_0"
+            name: "红色炬火"
+            icon: "REDSTONE_TORCH"
+            cooldown: 0
+            description: "火把→红石火把；使用红石火把攻击时有25%概率点燃对方"
+          - id: "scholar_redstone_eureka_1"
+            name: "定点脉冲"
+            icon: "REDSTONE_LAMP"
+            cooldown: 0
+            description: "消耗16红石粉，破坏自身周围4格内所有进阶红石器械"
+          - id: "scholar_redstone_eureka_2"
+            name: "雷霆之杖"
+            icon: "LIGHTNING_ROD"
+            cooldown: 0
+            description: "仅当手持避雷针时触发：有10%概率在前方召唤一道闪电，若失败则避雷针消失；当天气为降雨时成功概率上升至20%；当天气为雷暴时成功概率上升至33%"
+      # --- 行政专家 ---
+      SCHOLAR_ADMIN:
+        skills:
+          - id: "scholar_admin_skill_0"
+            name: "人力资源管理"
+            type: PASSIVE
+            icon: "PLAYER_HEAD"
+            levels:
+              - "使在线的所有拥有该分支玩家获得15秒的急迫I（此技能会向全服公告）"
+              - "使在线的所有拥有该分支玩家获得20秒的急迫I"
+              - "若拥有该指定分支的玩家已解锁任意一个顿悟，则改为获得20秒的急迫II"
+          - id: "scholar_admin_skill_1"
+            name: "行政结构优化"
+            type: ACTIVE
+            icon: "CLOCK"
+            cooldown: [50, 50, 50]
+            levels:
+              - "点经验"
+              - "点经验"
+              - "，则额外获得1技能点"
+          - id: "scholar_admin_skill_2"
+            name: "综合报告审阅"
+            type: ACTIVE
+            icon: "WRITTEN_BOOK"
+            levels:
+              - "来查看他们所拥有的职业、分支和技能等级"
+              - "来查看他们所拥有的职业、分支和技能等级"
+              - "来查看他们所拥有的职业、分支、技能等级和顿悟"
+        eurekas:
+          - id: "scholar_admin_eureka_0"
+            name: "立法程序"
+            icon: "BIRCH_LOG"
+            cooldown: 0
+            description: "（暂不实装，待更新）"
+          - id: "scholar_admin_eureka_1"
+            name: "危机处理"
+            icon: "SNOWBALL"
+            cooldown: 0
+            description: "来获取其坐标"
+          - id: "scholar_admin_eureka_2"
+            name: "人才追踪"
+            icon: "CREEPER_HEAD"
+            cooldown: 0
+            description: "+3x"
+
+      # --- 教师 ---
+      SCHOLAR_TEACHER:
+        skills:
+          - id: "scholar_teacher_skill_0"
+            name: "教育学"
+            type: PASSIVE
+            icon: "WRITABLE_BOOK"
+            levels:
+              - "手持书Shift+右键讲台可以消耗37经验等级和1技能点获取一本技能之书"
+              - "手持书Shift+右键讲台可以消耗34经验等级和1技能点获取一本技能之书"
+              - "手持书Shift+右键讲台可以消耗30经验等级和1技能点获取一本技能之书"
+          - id: "scholar_teacher_skill_1"
+            name: "厚积薄发"
+            type: ACTIVE
+            icon: "GLOWSTONE_DUST"
+            cooldown: [240, 240, 240]
+            levels:
+              - "下次手持书Shift+右键书架时，有10%概率只消耗1技能点就获得1本技能之书"
+              - "下次手持书Shift+右键书架时，有20%概率只消耗1技能点就获得1本技能之书"
+              - "下次手持书Shift+右键书架时，有30%概率只消耗1技能点就获得1本技能之书"
+          - id: "scholar_teacher_skill_2"
+            name: "学术沙龙"
+            type: ACTIVE
+            icon: "KNOWLEDGE_BOOK"
+            cooldown: [330, 330, 330]
+            levels:
+              - "持续30秒。周围4格内所有非敌对玩家的共鸣范围+8（包括自身）"
+              - "持续45秒。周围4格内所有非敌对玩家的共鸣范围+12"
+              - "持续60秒。周围4格内所有非敌对玩家的共鸣范围+16"
+        eurekas:
+          - id: "scholar_teacher_eureka_0"
+            name: "诲人不倦"
+            icon: "ECHO_SHARD"
+            cooldown: 0
+            description: "仅当处于讲台周围3格时可触发：获得20经验"
+          - id: "scholar_teacher_eureka_1"
+            name: "触类旁通"
+            icon: "STRING"
+            cooldown: 0
+            description: "仅当自身拥有【学者】职业下的另一个分支时触发且仅触发一次：立即获得3技能点"
+          - id: "scholar_teacher_eureka_2"
+            name: "鞠躬尽瘁"
+            icon: "KNOWLEDGE_BOOK"
+            cooldown: 0
+            description: "（暂不实装，待更新）"
+
+  # ===== 农夫 Farmer =====
+  FARMER:
+    branches:
+      # --- 渔夫 ---
+      FARMER_FISHERMAN:
+        skills:
+          - id: "farmer_fisherman_skill_0"
+            name: "垂钓熟手"
+            type: PASSIVE
+            icon: "FISHING_ROD"
+            levels:
+              - "钓鱼的QTE难度降低"
+              - "钓鱼的QTE容错提升"
+              - "钓鱼的QTE难度进一步降低，容错进一步提升"
+          - id: "farmer_fisherman_skill_1"
+            name: "收获涛声"
+            type: ACTIVE
+            icon: "COD"
+            cooldown: [540, 540, 540]
+            levels:
+              - "1个相应的鱼"
+              - "此技能的CD-10"
+              - "2个相应的鱼"
+          - id: "farmer_fisherman_skill_2"
+            name: "大洋眷顾"
+            type: ACTIVE
+            icon: "HEART_OF_THE_SEA"
+            cooldown: [210, 210, 210]
+            levels:
+              - "获得40秒的幸运II；若位于海洋生物群系，则时间变为60秒"
+              - "获得50秒的幸运II；若位于海洋生物群系，则时间变为90秒"
+              - "获得60秒的幸运II；若位于海洋生物群系，则时间变为120秒；若位于深海生物群系，则时间变为180秒"
+        eurekas:
+          - id: "farmer_fisherman_eureka_0"
+            name: "骇浪征服者"
+            icon: "TRIDENT"
+            cooldown: 1800
+            description: "在降水或雷暴天气时，若处于海洋生物群系，则获得抗性提升II"
+          - id: "farmer_fisherman_eureka_1"
+            name: "授人以渔"
+            icon: "FISHING_ROD"
+            cooldown: 0
+            description: "每次钓鱼成功时额外获得1~6点经验"
+          - id: "farmer_fisherman_eureka_2"
+            name: "凝望反制"
+            icon: "GUARDIAN_SPAWN_EGG"
+            cooldown: 0
+            description: "持续30秒。立即清除挖掘疲劳效果，受到来自守卫者、远古守卫者的伤害-6"
+      # --- 植物学家 ---
+      FARMER_BOTANIST:
+        skills:
+          - id: "farmer_botanist_skill_0"
+            name: "合理密植"
+            type: PASSIVE
+            icon: "WHEAT_SEEDS"
+            levels:
+              - "1个相应作物"
+              - "1个相应作物"
+              - "1个相应作物"
+          - id: "farmer_botanist_skill_1"
+            name: "科学施肥"
+            type: ACTIVE
+            icon: "BONE_MEAL"
+            cooldown: [540, 540, 540]
+            levels:
+              - "骨粉"
+              - "骨粉"
+              - "骨粉"
+          - id: "farmer_botanist_skill_2"
+            name: "植物遗传学"
+            type: ACTIVE
+            icon: "OAK_SAPLING"
+            cooldown: [210, 210, 210]
+            levels:
+              - "秒的急迫II"
+              - "此技能的CD-60"
+              - "秒的急迫III"
+        eurekas:
+          - id: "farmer_botanist_eureka_0"
+            name: "于荫求果"
+            icon: "APPLE"
+            cooldown: 0
+            description: "苹果"
+          - id: "farmer_botanist_eureka_1"
+            name: "终极奉献"
+            icon: "DISPENSER"
+            cooldown: 0
+            description: "每当用坏一把下界合金锄时，立即获得一把新的下界合金锄"
+          - id: "farmer_botanist_eureka_2"
+            name: "生态考察"
+            icon: "SPYGLASS"
+            cooldown: 0
+            description: "仅当自身拥有【农夫】职业下的另一个分支时触发且仅触发一次：立即获得3技能点"
+      # --- 牧场主 ---
+      FARMER_RANCHER:
+        skills:
+          - id: "farmer_rancher_skill_0"
+            name: "动物育种"
+            type: PASSIVE
+            icon: "EGG"
+            levels:
+              - "每次喂养动物时，有0.5%概率获得1个对应的刷怪蛋"
+              - "每次喂养动物时，有1%概率获得1个对应的刷怪蛋"
+              - "每次喂养动物时，有2%概率获得1个对应的刷怪蛋"
+          - id: "farmer_rancher_skill_1"
+            name: "饲料调配"
+            type: ACTIVE
+            icon: "HAY_BLOCK"
+            cooldown: [540, 540, 540]
+            levels:
+              - "下次喂养幼年牛、猪、鸡、绵羊时，使其立即成长至成年"
+              - "此技能CD-5"
+              - "此技能CD额外-5"
+          - id: "farmer_rancher_skill_2"
+            name: "牧原欢歌"
+            type: ACTIVE
+            icon: "MILK_BUCKET"
+            cooldown: [210, 210, 210]
+            levels:
+              - "若周围8格内存在牛或者山羊，则使背包内所有空桶变为奶桶"
+              - "此技能的范围变为12格"
+              - "此技能的范围变为16格"
+        eurekas:
+          - id: "farmer_rancher_eureka_0"
+            name: "游牧习俗"
+            icon: "SADDLE"
+            cooldown: 0
+            description: "当位于平原生物群系饮用奶时，获得瞬间治疗II效果"
+          - id: "farmer_rancher_eureka_1"
+            name: "现代化牧业"
+            icon: "SPAWNER"
+            cooldown: 0
+            description: "破坏刷怪笼时获得若干个对应的刷怪蛋"
+          - id: "farmer_rancher_eureka_2"
+            name: "克隆技术"
+            icon: "TURTLE_EGG"
+            cooldown: 0
+            description: "（暂不实装，待更新）"
+      # --- 行商 ---
+      FARMER_MERCHANT:
+        skills:
+          - id: "farmer_merchant_skill_0"
+            name: "商业谈判"
+            type: PASSIVE
+            icon: "EMERALD"
+            levels:
+              - "达成一项购买交易后，有15%概率返还所花费的30%绿宝石"
+              - "达成一项购买交易后，有20%概率返还所花费的40%绿宝石"
+              - "达成一项购买交易后，有25%概率返还所花费的50%绿宝石"
+          - id: "farmer_merchant_skill_1"
+            name: "破财消灾"
+            type: ACTIVE
+            icon: "GOLD_INGOT"
+            cooldown: [540, 540, 540]
+            levels:
+              - "消耗5绿宝石；回满周围8格内所有村民的生命值"
+              - "消耗4绿宝石；回满周围12格内所有村民的生命值"
+              - "消耗3绿宝石；回满周围16格内所有村民的生命值；如果处于村庄中，则同时回满自己的生命值"
+          - id: "farmer_merchant_skill_2"
+            name: "特聘保镖"
+            type: ACTIVE
+            icon: "IRON_GOLEM_SPAWN_EGG"
+            cooldown: [210, 210, 210]
+            levels:
+              - "持续60秒；视背包内绿宝石数量不同召唤：1~16→1雪傀儡；16~64→1雪傀儡+1铁傀儡；>64→2雪傀儡+1铁傀儡（技能结束后清除召唤物）"
+              - "持续90秒；召唤升级：1~16→2雪傀儡；16~64→2雪傀儡+1铁傀儡；>64→3雪傀儡+2铁傀儡"
+              - "持续120秒；召唤升级：1~16→2雪傀儡+1铁傀儡；16~64→3雪傀儡+2铁傀儡；>64→4雪傀儡+3铁傀儡"
+        eurekas:
+          - id: "farmer_merchant_eureka_0"
+            name: "同行浪迹"
+            icon: "WANDERING_TRADER_SPAWN_EGG"
+            cooldown: 0
+            description: "周围16格内的流浪商人获得发光效果，与流浪商人的前2次交易不消耗绿宝石"
+          - id: "farmer_merchant_eureka_1"
+            name: "路见不平"
+            icon: "IRON_SWORD"
+            cooldown: 0
+            description: "；袭击结束后获得的村庄英雄等级+1"
+          - id: "farmer_merchant_eureka_2"
+            name: "投资远见"
+            icon: "EMERALD_BLOCK"
+            cooldown: 0
+            description: "的绿宝石"
+
+  # ===== 工人 Worker =====
+  WORKER:
+    branches:
+      # --- 伐木工 ---
+      WORKER_LUMBERJACK:
+        skills:
+          - id: "worker_lumberjack_skill_0"
+            name: "全力劈砍"
+            type: PASSIVE
+            icon: "IRON_AXE"
+            levels:
+              - "破坏木方块时获得急迫II"
+              - "破坏木方块时获得急迫III"
+              - "破坏木方块时获得急迫IV"
+          - id: "worker_lumberjack_skill_1"
+            name: "巧力用斧"
+            type: ACTIVE
+            icon: "STONE_AXE"
+            cooldown: [10, 10, 10]
+            levels:
+              - "下次使用斧破坏木方块时不消耗耐久"
+              - "此技能的CD-2"
+              - "此技能的CD额外-2"
+          - id: "worker_lumberjack_skill_2"
+            name: "斩尽桎梏"
+            type: ACTIVE
+            icon: "DIAMOND_AXE"
+            cooldown: [480, 480, 480]
+            levels:
+              - "持续60秒。获得60秒的力量I，期间每破坏4个原木或菌柄即增加1级力量，最多可增加至力量III"
+              - "持续75秒。获得75秒的力量I，期间每破坏3个原木或菌柄即增加1级力量，最多可增加至力量III"
+              - "持续90秒。获得90秒的力量I，期间每破坏3个原木或菌柄即增加1级力量，最多可增加至力量IV"
+        eurekas:
+          - id: "worker_lumberjack_eureka_0"
+            name: "巨树攀登者"
+            icon: "SCAFFOLDING"
+            cooldown: 0
+            description: "脚手架"
+          - id: "worker_lumberjack_eureka_1"
+            name: "护林员"
+            icon: "CAMPFIRE"
+            cooldown: 0
+            description: "使指针处半径为5的球形区域内所有火熄灭"
+          - id: "worker_lumberjack_eureka_2"
+            name: "抽丝剥茧"
+            icon: "STRING"
+            cooldown: 0
+            description: "仅当位于下界时触发：破坏菌柄时有33%概率额外掉落1个相应菌柄"
+      # --- 矿工 ---
+      WORKER_MINER:
+        skills:
+          - id: "worker_miner_skill_0"
+            name: "奋力挖掘"
+            type: PASSIVE
+            icon: "IRON_PICKAXE"
+            levels:
+              - "破坏自然石方块时获得急迫II"
+              - "破坏自然石方块时获得急迫III"
+              - "破坏自然石方块时获得急迫IV"
+          - id: "worker_miner_skill_1"
+            name: "强力运镐"
+            type: ACTIVE
+            icon: "STONE_PICKAXE"
+            cooldown: [10, 10, 10]
+            levels:
+              - "下次使用镐破坏自然石方块时不消耗耐久"
+              - "（同上）"
+              - "（同上）"
+          - id: "worker_miner_skill_2"
+            name: "不灭矿灯"
+            type: ACTIVE
+            icon: "TORCH"
+            cooldown: [900, 900, 900]
+            levels:
+              - "持续120秒。获得一个光照强度为9的跟随自身的动态光源"
+              - "持续180秒。获得一个光照强度为12的跟随自身的动态光源；此技能的CD-60"
+              - "持续240秒。获得一个光照强度为15的跟随自身的动态光源；此技能的CD额外-60"
+        eurekas:
+          - id: "worker_miner_eureka_0"
+            name: "自然矿洞勘探"
+            icon: "CAVE_VINES"
+            cooldown: 0
+            description: "在洞穴生物群系时，黑暗环境耐受时间+5s，始终获得抗性提升I"
+          - id: "worker_miner_eureka_1"
+            name: "黑暗适应"
+            icon: "LANTERN"
+            cooldown: 0
+            description: "黑暗环境耐受时间+10s，受到黑暗环境的伤害-1"
+          - id: "worker_miner_eureka_2"
+            name: "地质学"
+            icon: "COMPASS"
+            cooldown: 0
+            description: "立即获知8格内距自己最近的金矿石或钻石矿石或绿宝石矿石或远古残骸的坐标"
+      # --- 烧炼师 ---
+      WORKER_SMELTER:
+        skills:
+          - id: "worker_smelter_skill_0"
+            name: "熔炉改良"
+            type: PASSIVE
+            icon: "FURNACE"
+            levels:
+              - "从熔炉或高炉中取出烧炼完成的物品时，每个物品都有10%概率增加1个额外产物"
+              - "从熔炉或高炉中取出烧炼完成的物品时，每个物品都有15%概率增加1个额外产物"
+              - "从熔炉或高炉中取出烧炼完成的物品时，每个物品都有20%概率增加1个额外产物"
+          - id: "worker_smelter_skill_1"
+            name: "熔金模具"
+            type: ACTIVE
+            icon: "GOLD_INGOT"
+            cooldown: [10, 10, 10]
+            levels:
+              - "下次从高炉中取出烧炼完成的物品时，每个物品提供2点额外经验"
+              - "下次从高炉中取出烧炼完成的物品时，每个物品提供3点额外经验"
+              - "下次从高炉中取出烧炼完成的物品时，每个物品提供4点额外经验"
+          - id: "worker_smelter_skill_2"
+            name: "燃料管道"
+            type: ACTIVE
+            icon: "BLAZE_ROD"
+            cooldown: [900, 900, 900]
+            levels:
+              - "持续30秒。使周围4格内所有熔炉和高炉保持燃烧状态（不消耗燃料）"
+              - "持续35秒。使周围6格内所有熔炉和高炉保持燃烧状态（不消耗燃料）"
+              - "持续40秒。使周围8格内所有熔炉和高炉保持燃烧状态（不消耗燃料）"
+        eurekas:
+          - id: "worker_smelter_eureka_0"
+            name: "煤液化"
+            icon: "COAL_BLOCK"
+            cooldown: 0
+            description: "8煤炭+1铁桶→岩浆桶"
+          - id: "worker_smelter_eureka_1"
+            name: "回炉重铸"
+            icon: "BLAST_FURNACE"
+            cooldown: 0
+            description: "在高炉中熔炼获得铁粒或金粒时，额外获得8个铁粒或金粒"
+          - id: "worker_smelter_eureka_2"
+            name: "制锭机床"
+            icon: "NETHERITE_INGOT"
+            cooldown: 0
+            description: "3铁块（第一排）+3金块（第二排）+3下界合金锭（第三排）→4下界合金锭"
+      # --- 工具制造商 ---
+      WORKER_TOOLMAKER:
+        skills:
+          - id: "worker_toolmaker_skill_0"
+            name: "镀层工艺"
+            type: PASSIVE
+            icon: "SMITHING_TABLE"
+            levels:
+              - "使用锻造台时，有10%概率不消耗下界合金锭"
+              - "使用锻造台时，有15%概率不消耗下界合金锭"
+              - "使用锻造台时，有20%概率不消耗下界合金锭"
+          - id: "worker_toolmaker_skill_1"
+            name: "熟能生巧"
+            type: ACTIVE
+            icon: "ANVIL"
+            cooldown: [480, 480, 480]
+            levels:
+              - "下次使用铁砧时，若消耗的经验等级≥8，则获得4经验等级"
+              - "下次使用铁砧时，若消耗的经验等级≥8，则获得6经验等级"
+              - "下次使用铁砧时，若消耗的经验等级≥8，则获得8经验等级"
+          - id: "worker_toolmaker_skill_2"
+            name: "关键结构加固"
+            type: ACTIVE
+            icon: "CRAFTING_TABLE"
+            cooldown: [900, 900, 900]
+            levels:
+              - "下次合成任意钻石工具时，为其赋予耐久I魔咒"
+              - "下次合成任意钻石工具时，有75%概率为其赋予耐久I魔咒，25%概率为其赋予耐久II魔咒"
+              - "下次合成任意钻石工具时，有55%概率为其赋予耐久I魔咒，40%概率为其赋予耐久II魔咒，5%概率为其赋予耐久III魔咒"
+        eurekas:
+          - id: "worker_toolmaker_eureka_0"
+            name: "古骸之触"
+            icon: "WITHER_SKELETON_SKULL"
+            cooldown: 0
+            description: "使用锻造台时，有20%概率+1经验等级"
+          - id: "worker_toolmaker_eureka_1"
+            name: "应急工具箱"
+            icon: "CHEST"
+            cooldown: 0
+            description: "消耗1经验等级，在指针处生成一个箱子，其中装有一整套的铁工具和1个铁桶"
+          - id: "worker_toolmaker_eureka_2"
+            name: "匠人精神"
+            icon: "CRAFTING_TABLE"
+            cooldown: 0
+            description: "仅当自身拥有【工人】职业下的另一个分支时触发且仅触发一次：立即获得3技能点"
+
+  # ===== 战士 Warrior =====
+  WARRIOR:
+    branches:
+      # --- 武器专家 ---
+      WARRIOR_WEAPON:
+        skills:
+          - id: "warrior_weapon_skill_0"
+            name: "以锋为御"
+            type: PASSIVE
+            icon: "DIAMOND_SWORD"
+            levels:
+              - "主手持剑时受到的伤害降低8%"
+              - "主手持剑时受到的伤害降低16%"
+              - "主手持剑时受到的伤害降低25%"
+          - id: "warrior_weapon_skill_1"
+            name: "信号弹"
+            type: ACTIVE
+            icon: "SPECTRAL_ARROW"
+            cooldown: [30, 30, 30]
+            levels:
+              - "下次射出光灵箭击中目标时不消耗光灵箭，且使该目标发光时长+5秒（共15秒）"
+              - "下次射出光灵箭击中目标时不消耗光灵箭，且使该目标发光时长+10秒（共20秒）"
+              - "下次射出光灵箭击中目标时不消耗光灵箭，且使该目标发光时长+15秒（共25秒）"
+          - id: "warrior_weapon_skill_2"
+            name: "奇兵突袭"
+            type: ACTIVE
+            icon: "ENDER_PEARL"
+            cooldown: [300, 300, 300]
+            levels:
+              - "持续30秒。期间获得隐身、力量II，黑暗环境耐受时间+5s；造成1次伤害后此技能立即结束"
+              - "持续45秒。期间获得隐身、力量III，黑暗环境耐受时间+10s；造成1次伤害后此技能立即结束"
+              - "持续60秒。期间获得隐身、力量IV，黑暗环境耐受时间+15s；造成1次伤害后此技能立即结束"
+        eurekas:
+          - id: "warrior_weapon_eureka_0"
+            name: "涌潮长戟"
+            icon: "TRIDENT"
+            cooldown: 0
+            description: "使用三叉戟近战攻击时每次攻击为自身恢复2生命值；远程攻击时为对方赋予10秒挖掘疲劳II"
+          - id: "warrior_weapon_eureka_1"
+            name: "穿甲箭头"
+            icon: "ARROW"
+            cooldown: 0
+            description: "使用弩射出的普通箭+1点真实伤害，弩每拥有1级穿透魔咒则此真实伤害+1点"
+          - id: "warrior_weapon_eureka_2"
+            name: "特训通知"
+            icon: "BELL"
+            cooldown: 0
+            description: "仅当自身拥有【战士】职业下的另一个分支时触发且仅触发一次：立即获得3技能点"
+      # --- 士兵 ---
+      WARRIOR_SOLDIER:
+        skills:
+          - id: "warrior_soldier_skill_0"
+            name: "军事训练"
+            type: PASSIVE
+            icon: "SHIELD"
+            levels:
+              - "+20%"
+              - "+30%"
+              - "+40%"
+          - id: "warrior_soldier_skill_1"
+            name: "掩体机动"
+            type: ACTIVE
+            icon: "IRON_BLOCK"
+            cooldown: [60, 60, 60]
+            levels:
+              - "获得10秒的抗性提升I效果；若生命值不高于20，则变为10秒抗性提升II效果"
+              - "获得12秒的抗性提升I效果；若生命值不高于20，则变为12秒抗性提升III效果"
+              - "获得15秒的抗性提升II效果；若生命值不高于15，则变为15秒抗性提升III效果"
+          - id: "warrior_soldier_skill_2"
+            name: "决战冲锋"
+            type: ACTIVE
+            icon: "DIAMOND_CHESTPLATE"
+            cooldown: [360, 360, 360]
+            levels:
+              - "持续60秒。获得5秒速度III；期间使用剑、斧、弓造成的伤害+30%；剑、斧、弓对盾牌的沉默时长+50%"
+              - "持续75秒。获得5秒速度III；期间使用剑、斧、弓造成的伤害+40%；剑、斧、弓对盾牌的沉默时长+75%"
+              - "持续90秒。获得5秒速度IV；期间使用剑、斧、弓造成的伤害+50%；剑、斧、弓对盾牌的沉默时长+100%"
+        eurekas:
+          - id: "warrior_soldier_eureka_0"
+            name: "游击战"
+            icon: "LEATHER_BOOTS"
+            cooldown: 0
+            description: "受到来自玩家的伤害后立即清除自身的发光效果，并获得3秒速度II"
+          - id: "warrior_soldier_eureka_1"
+            name: "无畏突刺"
+            icon: "IRON_SWORD"
+            cooldown: 0
+            description: "持续60秒。期间手持剑或斧进行攻击后，立即向前位移一段距离"
+          - id: "warrior_soldier_eureka_2"
+            name: "集群突击"
+            icon: "BANNER"
+            cooldown: 0
+            description: "周围4格内每有1个以【士兵】作为共鸣分支的非敌对玩家，则自己对玩家造成的伤害+1，受到来自玩家的伤害-1"
+      # --- 怪物猎人 ---
+      WARRIOR_HUNTER:
+        skills:
+          - id: "warrior_hunter_skill_0"
+            name: "除魅使命"
+            type: PASSIVE
+            icon: "BOW"
+            levels:
+              - "+40%"
+              - "+50%"
+              - "+60%"
+          - id: "warrior_hunter_skill_1"
+            name: "浴血强攻"
+            type: ACTIVE
+            icon: "IRON_AXE"
+            cooldown: [45, 45, 45]
+            levels:
+              - "获得10秒的力量I效果；若生命值不高于10，则变为10秒力量II效果"
+              - "获得12秒的力量I效果；若生命值不高于10，则变为12秒力量III效果"
+              - "获得15秒的力量II效果；若生命值不高于10，则变为15秒力量III效果"
+          - id: "warrior_hunter_skill_2"
+            name: "我即梦魇"
+            type: ACTIVE
+            icon: "WITHER_SKELETON_SKULL"
+            cooldown: [300, 300, 300]
+            levels:
+              - "+20%（与除魅使命加算）"
+              - "+30%"
+              - "+40%"
+        eurekas:
+          - id: "warrior_hunter_eureka_0"
+            name: "斩首"
+            icon: "SKELETON_SKULL"
+            cooldown: 0
+            description: "杀死以下怪物时有一定几率掉落其头颅：凋零骷髅（5%）、骷髅（2%）、僵尸（2%）、苦力怕（2%）、猪灵（1%）、末影龙（5%）"
+          - id: "warrior_hunter_eureka_1"
+            name: "暗夜行者"
+            icon: "ENDER_EYE"
+            cooldown: 0
+            description: "在夜晚时不再受黑暗环境影响，但在白天时生命上限-12（持续获得-3级的生命提升）"
+          - id: "warrior_hunter_eureka_2"
+            name: "圣洁泉源"
+            icon: "GLOWSTONE"
+            cooldown: 0
+            description: "清除周围4格内所有玩家的负面效果"
+      # --- 探险家 ---
+      WARRIOR_EXPLORER:
+        skills:
+          - id: "warrior_explorer_skill_0"
+            name: "原野跋涉"
+            type: PASSIVE
+            icon: "COMPASS"
+            levels:
+              - "获得0.3的体力修正，但不再能放置驻扎信标"
+              - "获得0.7的体力修正"
+              - "获得0.6的体力修正"
+          - id: "warrior_explorer_skill_1"
+            name: "探索者的行囊"
+            type: ACTIVE
+            icon: "BUNDLE"
+            cooldown: [120, 120, 120]
+            levels:
+              - "若生命值不为满：恢复8生命值；若饥饿值不为满：获得1个面包；（两者可同时触发）若两者均为满：获得60秒迅捷II"
+              - "若生命值不为满：恢复12生命值；若饥饿值不为满：获得1个熟鲑鱼；若两者均为满：获得75秒迅捷II"
+              - "若生命值不为满：恢复16生命值；若饥饿值不为满：获得1个南瓜派；若两者均为满：获得75秒迅捷III"
+          - id: "warrior_explorer_skill_2"
+            name: "前进营地"
+            type: ACTIVE
+            icon: "CAMPFIRE"
+            cooldown: [300, 300, 300]
+            levels:
+              - "放置的驻扎信标恢复光环+10%"
+              - "放置的驻扎信标恢复光环+20%"
+              - "放置的驻扎信标恢复光环+30%，且对体力不足1000的玩家额外+10%"
+        eurekas:
+          - id: "warrior_explorer_eureka_0"
+            name: "山海一过"
+            icon: "DIAMOND_BOOTS"
+            cooldown: 0
+            description: "始终获得迅捷II效果"
+          - id: "warrior_explorer_eureka_1"
+            name: "奔赴新边疆"
+            icon: "MAP"
+            cooldown: 0
+            description: "若位于平原生物群系，为6格内生物提供再生II效果"
+          - id: "warrior_explorer_eureka_2"
+            name: "旷野互助"
+            icon: "TOTEM_OF_UNDYING"
+            cooldown: 0
+            description: "（特殊效果：聚落相关的扩展功能）"

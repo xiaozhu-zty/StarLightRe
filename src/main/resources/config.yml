@@ -1,0 +1,32 @@
+# ============================================
+# StarLightRe - 职业生涯系统 配置文件
+# ============================================
+
+career:
+  # 技能点设置
+  skill-points:
+    initial: 3                    # 初次加入服务器的初始技能点
+    rebirth-bonus: 3              # 自然重生奖励技能点
+
+  # 共鸣系统设置
+  resonance:
+    range-per-level: 8.0          # 每级被动技能增加的共鸣范围（格）
+    friendly-multiplier: 0.75     # 友善共鸣范围乘数
+    internal-multiplier: 0.5      # 内部共鸣范围乘数
+    tick-interval: 20             # 共鸣扫描间隔（tick，20=1秒）
+
+  # 反刷机制设置
+  anti-farm:
+    rebirth-cooldown-days: 30     # 自然重生冷却时间（现实天数）
+    max-deaths-before-penalty: 6  # 1小时内最大死亡次数（超过触发惩罚）
+    suicide-penalty-duration-hours: 24  # 自杀惩罚持续时间（小时）
+
+  # 分支设置
+  branch:
+    max-unlocked: 6               # 每位玩家最多解锁的分支数量
+    forget-base-cost: 2          # 遗忘分支基础消耗（公式：2*等级 + 2）
+
+  # 技能设置
+  skill:
+    max-level: 3                  # 技能最大等级
+    level-up-cost: 1              # 每级升级消耗的技能点

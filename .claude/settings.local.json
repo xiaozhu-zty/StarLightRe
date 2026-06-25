@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew build *)",
+      "Bash(ls -la \"d:/mcplugins/starcraftre/StarLightRe/build/libs/\" && echo \"---\" && ls \"D:/server/mcpaper/plugins/\" 2>&1 | head -30)",
+      "Read(//d/server/mcpaper/plugins/**)"
+    ]
+  }
+}

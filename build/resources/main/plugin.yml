@@ -1,0 +1,39 @@
+main: com.waterful.project.StarLightRe
+version: 1.0.0-SNAPSHOT
+name: StarLightRe
+author: waterful
+description: A revive of StarLight
+api-version: 1.21
+
+commands:
+  career:
+    description: "打开职业生涯主面板"
+    usage: "/career"
+    aliases: [c, shengya]
+  shengya:
+    description: "打开职业生涯主面板（中文别名）"
+    usage: "/shengya"
+  class:
+    description: "查看职业分支信息"
+    usage: "/class [职业名称]"
+  skill1:
+    description: "发动主动技能一（Shift+G）"
+    usage: "/skill1"
+  skill2:
+    description: "发动主动技能二（Shift+H）"
+    usage: "/skill2"
+  eureka:
+    description: "发动顿悟能力（Shift+J）"
+    usage: "/eureka"
+  resonance:
+    description: "设置分支共鸣模式"
+    usage: "/resonance [分支名] [模式]"
+  addpoints:
+    description: "添加技能点"
+    usage: "/addpoints <数量>"
+  delcareer:
+    description: "重置职业/分支管理面板"
+    usage: "/delcareer"
+  listening:
+    description: "侦听模式：开启时所有职业判定输出通过/不通过信息"
+    usage: "/listening <true/false>"
