@@ -20,12 +20,14 @@ object CareerDataLoader {
         skillDefs.clear()
         eurekaDefs.clear()
 
-        val file = File(plugin.dataFolder, "career_data.yml")
-        if (!file.exists()) {
-            plugin.saveResource("career_data.yml", false)
+        // Always load from JAR resource to ensure latest data
+        val resource = plugin.getResource("career_data.yml")
+        if (resource == null) {
+            plugin.logger.warning("[StarLightRe] career_data.yml not found in JAR!")
+            return
         }
-
-        val cfg = YamlConfiguration.loadConfiguration(file)
+        val cfg = YamlConfiguration.loadConfiguration(java.io.InputStreamReader(resource))
+        resource.close()
         val careersSection = cfg.getConfigurationSection("careers") ?: run {
             plugin.logger.warning("[StarLightRe] career_data.yml missing 'careers' section")
             return

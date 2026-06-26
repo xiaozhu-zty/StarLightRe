@@ -6,23 +6,18 @@ import com.waterful.project.career.manager.CareerManager
 import com.waterful.project.career.manager.ResonanceManager
 import com.waterful.project.career.model.CareerPlayer
 import com.waterful.project.career.model.SkillType
+import com.waterful.project.career.skill.EurekaEffectHandler
 import com.waterful.project.career.skill.SkillExecutor
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
-import org.bukkit.Material
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
-import org.bukkit.event.block.Action
-import org.bukkit.event.player.PlayerDropItemEvent
-import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.bukkit.event.player.PlayerSwapHandItemsEvent
 
 class PlayerListener : Listener {
-
-    // ===== Career Data Lifecycle =====
 
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
@@ -31,7 +26,6 @@ class PlayerListener : Listener {
 
         if (!cp.isCareerSelected) {
             val assigned = AntiFarmManager.assignClassesOnJoin(player)
-
             if (assigned.isNotEmpty()) {
                 val remaining = CareerPlayer.INITIAL_CLASSES - assigned.size
                 player.sendMessage(
@@ -53,7 +47,6 @@ class PlayerListener : Listener {
             )
             showHotkeyHint(player)
         }
-
         ResonanceManager.refreshPlayer(player)
     }
 
@@ -79,65 +72,58 @@ class PlayerListener : Listener {
         }
     }
 
-    // ===== Hotkey: Shift+Q → Active Skill 1 =====
+    // ===== Hotkey: Shift+1~9 → bound skills / eurekas / GUIs =====
 
     @EventHandler
-    fun onPlayerDropItem(event: PlayerDropItemEvent) {
+    fun onPlayerItemHeld(event: org.bukkit.event.player.PlayerItemHeldEvent) {
         val player = event.player
         if (!player.isSneaking) return
-
-        // Only trigger if player has active skills
-        val cp = CareerManager.getPlayer(player) ?: return
-        if (cp.unlockedBranches.isEmpty()) return
-
-        // Find first active skill at index 1 with level > 0
-        val entry = cp.unlockedBranches.entries.firstOrNull { (_, skills) ->
-            val skill = skills.getOrNull(1)
-            skill != null && skill.skillDef.skillType == SkillType.ACTIVE && skill.currentLevel > 0
-        } ?: return
-
         event.isCancelled = true
-        val (branch, _) = entry
-        val skill = cp.getSkill(branch, 1)!!
-        SkillExecutor.executeSkill(player, skill)
-    }
 
-    // ===== Hotkey: Shift+Right Click Air → Active Skill 2 =====
-
-    @EventHandler
-    fun onPlayerInteract(event: PlayerInteractEvent) {
-        val player = event.player
-        if (!player.isSneaking) return
-        if (event.action != Action.RIGHT_CLICK_AIR) return
-
-        // Don't intercept when holding a usable item (bow, food, potion, etc.)
-        val held = player.inventory.itemInMainHand
-        if (held.type.isBlock || held.type.isEdible || held.type == Material.BOW ||
-            held.type == Material.CROSSBOW || held.type == Material.TRIDENT ||
-            held.type == Material.SHIELD || held.type == Material.POTION ||
-            held.type == Material.SPLASH_POTION || held.type == Material.LINGERING_POTION
-        ) return
-
+        val numKey = event.newSlot + 1 // 1-9
         val cp = CareerManager.getPlayer(player) ?: return
-        if (cp.unlockedBranches.isEmpty()) return
 
-        // Find first active skill at index 2 with level > 0
-        val entry = cp.unlockedBranches.entries.firstOrNull { (_, skills) ->
-            val skill = skills.getOrNull(2)
-            skill != null && skill.skillDef.skillType == SkillType.ACTIVE && skill.currentLevel > 0
-        } ?: return
+        // Check custom binding
+        val bindStr = cp.hotkeyBinds[numKey - 1]
+        if (bindStr != null) {
+            // Eureka binding: "eureka:branchName"
+            if (bindStr.startsWith("eureka:")) {
+                val branchName = bindStr.removePrefix("eureka:")
+                val branch = com.waterful.project.career.model.Branch.fromName(branchName)
+                if (branch != null && cp.chosenEurekas.containsKey(branch)) {
+                    val eureka = cp.chosenEurekas[branch]!!
+                    if (EurekaEffectHandler.execute(eureka.eurekaDef.id, player)) return
+                    player.sendMessage("§5✦ 顿悟触发：${eureka.eurekaDef.name}")
+                }
+                return
+            }
+            // Skill binding: "branchName:skillIndex"
+            val parts = bindStr.split(":", limit = 2)
+            val branchName = parts.getOrNull(0)
+            val skillIndex = parts.getOrNull(1)?.toIntOrNull()
+            if (branchName != null && skillIndex != null) {
+                val branch = com.waterful.project.career.model.Branch.fromName(branchName)
+                if (branch != null) {
+                    val skill = cp.getSkill(branch, skillIndex)
+                    if (skill != null && skill.currentLevel > 0) {
+                        SkillExecutor.executeSkill(player, skill)
+                        return
+                    }
+                }
+            }
+        }
 
-        event.isCancelled = true
-        val (branch, _) = entry
-        val skill = cp.getSkill(branch, 2)!!
-        SkillExecutor.executeSkill(player, skill)
+        // Fallback: default GUI hotkeys
+        when (numKey) {
+            1 -> CareerGUI.open(player)
+            2 -> com.waterful.project.career.gui.BindGUI.open(player)
+            3 -> com.waterful.project.career.gui.DelCareerGUI.open(player)
+        }
     }
-
-    // ===== Helpers =====
 
     private fun showHotkeyHint(player: org.bukkit.entity.Player) {
         player.sendMessage(
-            Component.text("快捷键：Shift+F 生涯面板 | Shift+Q 技能1 | Shift+右键 技能2",
+            Component.text("热键：Shift+F 生涯面板 | Shift+2 绑定面板 | Shift+1~9 自定义技能/顿悟",
                 NamedTextColor.GRAY)
         )
     }

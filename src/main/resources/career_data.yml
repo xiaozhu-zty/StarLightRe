@@ -388,7 +388,7 @@ careers:
               - "使用附魔台进行附魔时有60%概率使消耗的经验等级-3"
           - id: "scholar_enchanter_skill_1"
             name: "魔力虹吸"
-            type: ACTIVE
+            type: PASSIVE
             icon: "GRINDSTONE"
             cooldown: [5400, 5400, 5400]
             levels:
@@ -470,7 +470,7 @@ careers:
         skills:
           - id: "scholar_admin_skill_0"
             name: "人力资源管理"
-            type: PASSIVE
+            type: ACTIVE
             icon: "PLAYER_HEAD"
             levels:
               - "使在线的所有拥有该分支玩家获得15秒的急迫I（此技能会向全服公告）"
@@ -523,7 +523,7 @@ careers:
               - "手持书Shift+右键讲台可以消耗30经验等级和1技能点获取一本技能之书"
           - id: "scholar_teacher_skill_1"
             name: "厚积薄发"
-            type: ACTIVE
+            type: PASSIVE
             icon: "GLOWSTONE_DUST"
             cooldown: [240, 240, 240]
             levels:
@@ -900,7 +900,7 @@ careers:
               - "下次使用铁砧时，若消耗的经验等级≥8，则获得8经验等级"
           - id: "worker_toolmaker_skill_2"
             name: "关键结构加固"
-            type: ACTIVE
+            type: PASSIVE
             icon: "CRAFTING_TABLE"
             cooldown: [900, 900, 900]
             levels:

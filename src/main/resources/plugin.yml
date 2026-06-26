@@ -37,3 +37,6 @@ commands:
   listening:
     description: "侦听模式：开启时所有职业判定输出通过/不通过信息"
     usage: "/listening <true/false>"
+  confirm:
+    description: "确认或取消待处理操作"
+    usage: "/confirm <yes/no>"

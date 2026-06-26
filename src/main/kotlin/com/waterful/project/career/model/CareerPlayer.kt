@@ -15,7 +15,9 @@ data class CareerPlayer(
     // Cooldowns: skillEffectId -> lastUsedEpochMs
     val cooldowns: MutableMap<String, Long> = mutableMapOf(),
     // Auto-cast settings for active skills
-    val autoCastSkills: MutableMap<String, Boolean> = mutableMapOf()
+    val autoCastSkills: MutableMap<String, Boolean> = mutableMapOf(),
+    // Hotkey bindings: slotIndex(0-8) -> "branchName:skillIndex"
+    val hotkeyBinds: MutableMap<Int, String> = mutableMapOf()
 ) {
     /** Get the level of a branch: sum of all skill levels + (1 if eureka chosen) */
     fun getBranchLevel(branch: Branch): Int {
@@ -64,11 +66,24 @@ data class CareerPlayer(
         cooldowns[effectId] = now
     }
 
-    /** Get forget branch cost: (2 * level + 2) */
+    /** Get forget branch cost: level + 1 (matching StarLightCore reference) */
     fun getForgetCost(branch: Branch): Int {
         val level = getBranchLevel(branch)
-        return 2 * level + 2
+        return level + 1
     }
+
+    /** Check if player has another branch unlocked in the same career class */
+    fun hasOtherBranchInClass(branch: Branch): Boolean {
+        val careerClass = branch.careerClass
+        return unlockedBranches.keys.any { it.careerClass == careerClass && it != branch }
+    }
+
+    /** Special eureka names that grant 3 skill points if another branch in same class is unlocked */
+    val specialEurekaNames: Set<String> = setOf(
+        "主世界的建造者", "以厨为师", "鞠躬尽瘁", "生态考察", "匠人精神", "特训通知"
+    )
+
+    fun isSpecialEureka(eurekaName: String): Boolean = eurekaName in specialEurekaNames
 
     /** Get resonance mode for a branch (defaults to DISABLED) */
     fun getResonanceMode(branch: Branch): ResonanceMode =

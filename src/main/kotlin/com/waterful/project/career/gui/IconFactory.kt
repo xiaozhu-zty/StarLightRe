@@ -2,6 +2,7 @@ package com.waterful.project.career.gui
 
 import com.waterful.project.career.model.Branch
 import com.waterful.project.career.model.CareerClass
+import com.waterful.project.career.model.CareerPlayer
 import com.waterful.project.career.model.EurekaDef
 import com.waterful.project.career.model.ResonanceMode
 import com.waterful.project.career.model.SkillInstance
@@ -348,21 +349,39 @@ object IconFactory {
 
     // ===== Eureka GUI Icons =====
 
-    fun eurekaOptionIcon(eureka: EurekaDef, isChosen: Boolean, canAfford: Boolean): ItemStack {
+    fun eurekaOptionIcon(eureka: EurekaDef, isChosen: Boolean, canAfford: Boolean, cp: CareerPlayer? = null, cost: Int = 1): ItemStack {
         val item = if (isChosen) ItemStack(Material.NETHER_STAR) else ItemStack(Material.ENDER_EYE)
         item.editMeta {
             it.displayName(Component.text(
-                truncateName(eureka.name, 20),
+                truncateName(eureka.name, 16),
                 if (isChosen) NamedTextColor.LIGHT_PURPLE else NamedTextColor.DARK_PURPLE
             ))
             val desc = mutableListOf<Component>()
-            desc.addAll(wrapLore(eureka.description, NamedTextColor.GRAY))
-            desc.add(Component.text(""))
-            desc.add(
-                if (isChosen) Component.text("已选择", NamedTextColor.GREEN)
-                else if (canAfford) Component.text("点击选择（消耗1技能点）", NamedTextColor.GOLD)
-                else Component.text("技能点不足", NamedTextColor.RED)
-            )
+
+            // Eureka effect description
+            if (eureka.description.isNotBlank()) {
+                desc.add(Component.text("效果：", NamedTextColor.GOLD))
+                desc.addAll(wrapLore(eureka.description, NamedTextColor.GRAY))
+                desc.add(Component.text(""))
+            }
+
+            // Cooldown
+            if (eureka.cooldownSeconds > 0) {
+                desc.add(Component.text("冷却：${eureka.cooldownSeconds}秒", NamedTextColor.AQUA))
+                desc.add(Component.text(""))
+            }
+
+            // Status / cost
+            if (isChosen) {
+                desc.add(Component.text("✦ 已解锁", NamedTextColor.GREEN))
+            } else if (cp != null && cp.isSpecialEureka(eureka.name)) {
+                desc.add(Component.text("同职业另有一分支解锁时", NamedTextColor.GOLD))
+                desc.add(Component.text("赠送 3 技能点！（不消耗）", NamedTextColor.GREEN, TextDecoration.BOLD))
+            } else if (canAfford) {
+                desc.add(Component.text("点击选择（消耗${cost}技能点）", NamedTextColor.GOLD))
+            } else {
+                desc.add(Component.text("技能点不足", NamedTextColor.RED))
+            }
             it.lore(desc)
         }
         return item

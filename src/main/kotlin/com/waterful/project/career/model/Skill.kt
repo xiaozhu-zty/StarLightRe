@@ -19,8 +19,9 @@ data class SkillDef(
         cooldownSeconds.getOrElse(level - 1) { 60 }
 
     companion object {
+        /** Generate skill ID matching YAML keys (0-based: skill_0, skill_1, skill_2) */
         fun makeId(branch: Branch, index: Int): String =
-            "${branch.name.lowercase()}_skill_${index + 1}"
+            "${branch.name.lowercase()}_skill_$index"
     }
 }
 

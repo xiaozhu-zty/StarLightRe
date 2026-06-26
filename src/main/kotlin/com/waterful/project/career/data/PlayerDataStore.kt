@@ -125,6 +125,11 @@ class PlayerDataStore(private val plugin: JavaPlugin) {
             cfg.set("cooldowns.$key", value)
         }
 
+        // Hotkey bindings: slot(0-8) -> "branchName:skillIndex" or "eureka:branchName"
+        for ((slot, binding) in player.hotkeyBinds) {
+            cfg.set("hotkeys.$slot", binding)
+        }
+
         return cfg
     }
 
@@ -215,6 +220,14 @@ class PlayerDataStore(private val plugin: JavaPlugin) {
         val cooldownSection = cfg.getConfigurationSection("cooldowns")
         cooldownSection?.getKeys(false)?.forEach { key ->
             player.cooldowns[key] = cfg.getLong("cooldowns.$key")
+        }
+
+        // Load hotkey bindings
+        val hotkeysSection = cfg.getConfigurationSection("hotkeys")
+        hotkeysSection?.getKeys(false)?.forEach { key ->
+            val slot = key.toIntOrNull() ?: return@forEach
+            val binding = cfg.getString("hotkeys.$key") ?: return@forEach
+            player.hotkeyBinds[slot] = binding
         }
 
         playerCache[uuid] = player

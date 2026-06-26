@@ -262,6 +262,21 @@ object CareerManager {
             return false
         }
 
+        val eurekaOption = getEurekaOptions(branch).getOrNull(eurekaIndex) ?: return false
+
+        // Special eurekas: grant 3 skill points instead of costing, require another branch in same class
+        if (cp.isSpecialEureka(eurekaOption.name)) {
+            if (!cp.hasOtherBranchInClass(branch)) {
+                player.sendMessage("§c请先解锁同职业下的另一个分支！")
+                return false
+            }
+            SkillPointManager.addPoints(cp, 3)
+            cp.chosenEurekas[branch] = EurekaInstance(eurekaDef = eurekaOption)
+            player.sendMessage("§5✦ 已解锁顿悟：${eurekaOption.name}！§a额外获得 3 技能点！")
+            return true
+        }
+
+        // Normal eurekas: costs 1 skill point
         val cost = config?.skillLevelUpCost ?: 1
         if (!SkillPointManager.hasEnough(cp, cost)) {
             player.sendMessage("§c技能点不足，解锁顿悟需要${cost}技能点！")
@@ -269,8 +284,6 @@ object CareerManager {
         }
 
         if (!SkillPointManager.spendPoints(cp, cost)) return false
-
-        val eurekaOption = getEurekaOptions(branch).getOrNull(eurekaIndex) ?: return false
         cp.chosenEurekas[branch] = EurekaInstance(eurekaDef = eurekaOption)
 
         player.sendMessage("§5✦ 已解锁顿悟：${eurekaOption.name}！")

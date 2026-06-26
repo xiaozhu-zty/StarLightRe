@@ -1,6 +1,7 @@
 package com.waterful.project.career.gui
 
 import com.waterful.project.career.manager.CareerManager
+import com.waterful.project.career.manager.ConfirmManager
 import com.waterful.project.career.model.Branch
 import com.waterful.project.career.model.CareerClass
 import com.waterful.project.career.model.CareerPlayer
@@ -63,24 +64,18 @@ object DelCareerGUI {
         when (slot) {
             8, 53 -> { player.closeInventory(); return true }
 
-            // Career reset buttons (slots 20, 22, 24)
-            20 -> handleCareerReset(player, cp, 0)
-            22 -> handleCareerReset(player, cp, 1)
-            24 -> handleCareerReset(player, cp, 2)
-
-            // Branch delete buttons (slots 29, 31, 33, 37, 39, 41)
-            29 -> handleBranchDelete(player, cp, 0)
-            31 -> handleBranchDelete(player, cp, 1)
-            33 -> handleBranchDelete(player, cp, 2)
-            37 -> handleBranchDelete(player, cp, 3)
-            39 -> handleBranchDelete(player, cp, 4)
-            41 -> handleBranchDelete(player, cp, 5)
-
-            // Reset ALL careers
-            13 -> handleResetAllCareers(player, cp)
-
-            // Reset ALL branches (keep classes)
-            49 -> handleResetAllBranches(player, cp)
+            // All destructive ops require double-confirm
+            13 -> confirm(player, "重置全部职业", { handleResetAllCareers(player, cp) })
+            20 -> confirm(player, "重置职业", { handleCareerReset(player, cp, 0) })
+            22 -> confirm(player, "重置职业", { handleCareerReset(player, cp, 1) })
+            24 -> confirm(player, "重置职业", { handleCareerReset(player, cp, 2) })
+            29 -> confirm(player, "删除分支", { handleBranchDelete(player, cp, 0) })
+            31 -> confirm(player, "删除分支", { handleBranchDelete(player, cp, 1) })
+            33 -> confirm(player, "删除分支", { handleBranchDelete(player, cp, 2) })
+            37 -> confirm(player, "删除分支", { handleBranchDelete(player, cp, 3) })
+            39 -> confirm(player, "删除分支", { handleBranchDelete(player, cp, 4) })
+            41 -> confirm(player, "删除分支", { handleBranchDelete(player, cp, 5) })
+            49 -> confirm(player, "重置所有分支（保留职业）", { handleResetAllBranches(player, cp) })
         }
         return true
     }
@@ -149,6 +144,10 @@ object DelCareerGUI {
 
         player.closeInventory()
         open(player) // Refresh
+    }
+
+    private fun confirm(player: Player, desc: String, action: () -> Unit) {
+        ConfirmManager.requestConfirm(player, "删除操作：$desc", action)
     }
 
     // ===== Icon factories =====

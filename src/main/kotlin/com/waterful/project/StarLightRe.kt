@@ -5,6 +5,7 @@ import com.waterful.project.career.data.ConfigManager
 import com.waterful.project.career.data.PlayerDataStore
 import com.waterful.project.career.listener.AntiFarmListener
 import com.waterful.project.career.listener.CareerGateListener
+import com.waterful.project.career.listener.TeacherListener
 import com.waterful.project.career.listener.CareerGUIListener
 import com.waterful.project.career.listener.PassiveSkillListener
 import com.waterful.project.career.listener.ResonanceListener
@@ -19,6 +20,7 @@ import com.waterful.project.career.command.ClassCommand
 import com.waterful.project.career.command.SkillCommand
 import com.waterful.project.career.command.EurekaCommand
 import com.waterful.project.career.command.AddPointsCommand
+import com.waterful.project.career.command.ConfirmCommand
 import com.waterful.project.career.command.DelCareerCommand
 import com.waterful.project.career.command.ListeningCommand
 import com.waterful.project.career.command.ResonanceCommand
@@ -62,6 +64,7 @@ class StarLightRe : JavaPlugin() {
         getCommand("addpoints")?.setExecutor(AddPointsCommand())
         getCommand("delcareer")?.setExecutor(DelCareerCommand())
         getCommand("listening")?.setExecutor(ListeningCommand())
+        getCommand("confirm")?.setExecutor(ConfirmCommand())
 
         // Register listeners
         server.pluginManager.registerEvents(PlayerListener(), this)
@@ -70,6 +73,7 @@ class StarLightRe : JavaPlugin() {
         server.pluginManager.registerEvents(AntiFarmListener(), this)
         server.pluginManager.registerEvents(PassiveSkillListener(), this)
         server.pluginManager.registerEvents(CareerGateListener(), this)
+        server.pluginManager.registerEvents(TeacherListener(this), this)
 
         // Start resonance tick task
         startResonanceTask()
