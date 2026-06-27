@@ -20,6 +20,7 @@ import com.waterful.project.career.command.ClassCommand
 import com.waterful.project.career.command.SkillCommand
 import com.waterful.project.career.command.EurekaCommand
 import com.waterful.project.career.command.AddPointsCommand
+import com.waterful.project.career.command.ClearCDCommand
 import com.waterful.project.career.command.ConfirmCommand
 import com.waterful.project.career.command.DelCareerCommand
 import com.waterful.project.career.command.ListeningCommand
@@ -65,6 +66,7 @@ class StarLightRe : JavaPlugin() {
         getCommand("delcareer")?.setExecutor(DelCareerCommand())
         getCommand("listening")?.setExecutor(ListeningCommand())
         getCommand("confirm")?.setExecutor(ConfirmCommand())
+        getCommand("clearcd")?.setExecutor(ClearCDCommand())
 
         // Register listeners
         server.pluginManager.registerEvents(PlayerListener(), this)

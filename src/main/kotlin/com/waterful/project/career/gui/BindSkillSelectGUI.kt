@@ -31,10 +31,12 @@ object BindSkillSelectGUI {
             slot++
         }
 
-        // Eureka
+        // Show ACTIVE eurekas
         cp.chosenEurekas[branch]?.let { eureka ->
-            inv.setItem(slot, eurekaBindIcon(eureka.eurekaDef.name, branch, targetSlot))
-            slot++
+            if (eureka.eurekaDef.skillType == SkillType.ACTIVE) {
+                inv.setItem(slot, eurekaBindIcon(eureka.eurekaDef.name, branch, targetSlot))
+                slot++
+            }
         }
 
         if (slot == 10) {
@@ -69,9 +71,9 @@ object BindSkillSelectGUI {
             skillOffset++
         }
 
-        // Eureka
+        // ACTIVE eureka binding
         cp.chosenEurekas[branch]?.let { eureka ->
-            if (10 + skillOffset == slot) {
+            if (eureka.eurekaDef.skillType == SkillType.ACTIVE && 10 + skillOffset == slot) {
                 val bindIndex = BindSkillSelectTarget.targetSlot
                 if (bindIndex < 0) { player.sendMessage("§c绑定槽位信息丢失"); return true }
                 cp.hotkeyBinds[bindIndex] = "eureka:${branch.name}"

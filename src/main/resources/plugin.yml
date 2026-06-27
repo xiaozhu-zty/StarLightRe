@@ -40,3 +40,6 @@ commands:
   confirm:
     description: "确认或取消待处理操作"
     usage: "/confirm <yes/no>"
+  clearcd:
+    description: "清除所有技能冷却"
+    usage: "/clearcd"

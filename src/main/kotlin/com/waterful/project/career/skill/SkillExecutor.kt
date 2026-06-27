@@ -136,7 +136,7 @@ object SkillExecutor {
         "warrior_explorer_skill_1" to ::executeTanSuoZheXingNang,
         "warrior_weapon_skill_1" to ::executeXinHaoDan,
         "warrior_hunter_skill_2" to ::executeWoJiEMengYan,
-        "warrior_explorer_skill_2" to ::executeQianJinYingDi
+        "warrior_explorer_skill_2" to ::executeQianJinYingDi,
     )
 
     private fun executeBuiltinEffect(player: Player, skill: SkillInstance, level: Int): Boolean {
@@ -488,11 +488,48 @@ object SkillExecutor {
         return true
     }
 
-    /** 超载: 红石信号 */
+    /** 超载: 周围8格红石粉受15级信号，站红石粉上的玩家每秒受1点伤害 */
     private fun executeChaoZai(p: Player, s: SkillInstance, lv: Int): Boolean {
         val duration = when (lv) { 1 -> 20; 2 -> 25; 3 -> 30; else -> 20 }
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, duration * 20, 2, false, true))
-        p.sendMessage(Component.text("§a✦ 超载：红石粉受信号，持续${duration}秒"))
+        val range = 8
+        val center = p.location.clone()
+        val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") ?: run {
+            p.sendMessage("§c内部错误: 找不到插件实例"); return false
+        }
+
+        // Set redstone power to 15 and store originals
+        val poweredWires = mutableMapOf<org.bukkit.block.Block, org.bukkit.block.data.BlockData>()
+        var wireCount = 0
+        for (x in -range..range) for (y in -2..2) for (z in -range..range) {
+            val block = center.clone().add(x.toDouble(), y.toDouble(), z.toDouble()).block
+            if (block.type == org.bukkit.Material.REDSTONE_WIRE) {
+                try {
+                    poweredWires[block] = block.blockData.clone()
+                    block.blockData = org.bukkit.Bukkit.createBlockData("minecraft:redstone_wire[power=15]")
+                    wireCount++
+                } catch (e: Exception) {
+                    p.sendMessage("§c红石粉设置失败: ${e.message}")
+                }
+            }
+        }
+        p.sendMessage("§a✦ 超载：已设置${wireCount}处红石粉 => 信号15，持续${duration}秒")
+
+        // Damage players on redstone every second
+        val taskObj = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+            for (target in center.getNearbyPlayers(range.toDouble())) {
+                if (target.location.block.type == org.bukkit.Material.REDSTONE_WIRE) target.damage(1.0)
+            }
+        }, 0L, 20L)
+
+        // Restore after duration
+        org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+            taskObj.cancel()
+            poweredWires.forEach { (block, original) ->
+                try { block.blockData = original } catch (_: Exception) {}
+            }
+            p.sendMessage("§7超载效果结束")
+        }, duration * 20L)
+
         return true
     }
 
@@ -572,6 +609,44 @@ object SkillExecutor {
         val boost = when (lv) { 1 -> 0.10; 2 -> 0.20; 3 -> 0.30; else -> 0.10 }
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION, 60 * 20, 0, false, true))
         p.sendMessage(Component.text("§a✦ 前进营地：信标恢复光环+${(boost*100).toInt()}%"))
+        return true
+    }
+
+    /** 识色敏锐: 随机获得染色方块 */
+    private fun executeShiSeMinRui(p: Player, s: SkillInstance, lv: Int): Boolean {
+        val dyes = listOf(
+            org.bukkit.Material.RED_DYE, org.bukkit.Material.GREEN_DYE, org.bukkit.Material.BLUE_DYE, org.bukkit.Material.YELLOW_DYE,
+            org.bukkit.Material.PURPLE_DYE, org.bukkit.Material.CYAN_DYE, org.bukkit.Material.LIGHT_GRAY_DYE, org.bukkit.Material.GRAY_DYE,
+            org.bukkit.Material.PINK_DYE, org.bukkit.Material.LIME_DYE, org.bukkit.Material.ORANGE_DYE, org.bukkit.Material.MAGENTA_DYE,
+            org.bukkit.Material.LIGHT_BLUE_DYE, org.bukkit.Material.BROWN_DYE, org.bukkit.Material.BLACK_DYE, org.bukkit.Material.WHITE_DYE
+        )
+        val count = when (lv) { 1 -> 1; 2 -> 1; 3 -> 2; else -> 1 }
+        repeat(count) { p.inventory.addItem(org.bukkit.inventory.ItemStack(dyes.random(), 1)) }
+        p.sendMessage(Component.text("§a✦ 识色敏锐：获得${count}个随机染料"))
+        return true
+    }
+
+    /** 自动化生产: 获得红石相关产物 */
+    private fun executeZiDongHuaShengChan(p: Player, s: SkillInstance, lv: Int): Boolean {
+        val products: List<Pair<org.bukkit.Material, Int>> = listOf(
+            org.bukkit.Material.REDSTONE to 4, org.bukkit.Material.REPEATER to 2,
+            org.bukkit.Material.COMPARATOR to 1, org.bukkit.Material.PISTON to 2,
+            org.bukkit.Material.STICKY_PISTON to 1, org.bukkit.Material.OBSERVER to 1,
+            org.bukkit.Material.DROPPER to 2, org.bukkit.Material.DISPENSER to 1
+        )
+        repeat(lv) {
+            val pair = products.random()
+            p.inventory.addItem(org.bukkit.inventory.ItemStack(pair.first, pair.second))
+        }
+        p.sendMessage(Component.text("§a✦ 自动化生产：获得红石产物 (×${lv})"))
+        return true
+    }
+
+    /** 熟能生巧: 铁砧使用获得额外经验 */
+    private fun executeShuNengShengQiao(p: Player, s: SkillInstance, lv: Int): Boolean {
+        val exp = when (lv) { 1 -> 4; 2 -> 6; 3 -> 8; else -> 4 }
+        p.giveExp(exp)
+        p.sendMessage(Component.text("§a✦ 熟能生巧：获得${exp}级经验（用于铁砧操作）"))
         return true
     }
 

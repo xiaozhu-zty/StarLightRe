@@ -23,6 +23,7 @@ class PlayerListener : Listener {
     fun onPlayerJoin(event: PlayerJoinEvent) {
         val player = event.player
         val cp = CareerManager.loadPlayer(player.uniqueId, player.name)
+        CareerManager.validateHotkeyBinds(cp) // Clean stale bindings
 
         if (!cp.isCareerSelected) {
             val assigned = AntiFarmManager.assignClassesOnJoin(player)
@@ -86,16 +87,15 @@ class PlayerListener : Listener {
         // Check custom binding
         val bindStr = cp.hotkeyBinds[numKey - 1]
         if (bindStr != null) {
-            // Eureka binding: "eureka:branchName"
+            // ACTIVE eureka binding: "eureka:branchName"
             if (bindStr.startsWith("eureka:")) {
                 val branchName = bindStr.removePrefix("eureka:")
                 val branch = com.waterful.project.career.model.Branch.fromName(branchName)
                 if (branch != null && cp.chosenEurekas.containsKey(branch)) {
                     val eureka = cp.chosenEurekas[branch]!!
-                    if (EurekaEffectHandler.execute(eureka.eurekaDef.id, player)) return
-                    player.sendMessage("§5✦ 顿悟触发：${eureka.eurekaDef.name}")
+                    EurekaEffectHandler.execute(eureka.eurekaDef.id, player)
+                    return
                 }
-                return
             }
             // Skill binding: "branchName:skillIndex"
             val parts = bindStr.split(":", limit = 2)

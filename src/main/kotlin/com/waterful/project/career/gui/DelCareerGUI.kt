@@ -89,10 +89,12 @@ object DelCareerGUI {
             cp.unlockedBranches.remove(branch)
             cp.chosenEurekas.remove(branch)
             cp.resonanceModes.remove(branch)
+            CareerManager.clearHotkeyBindsForBranch(cp, branch)
         }
 
         // Remove the career class itself
         cp.selectedClasses.remove(careerClass)
+        CareerManager.validateHotkeyBinds(cp)
 
         player.sendMessage("§a✦ 已重置职业：§e${careerClass.displayName}§a（移除了 ${branches.size} 个分支）")
         player.sendMessage("§7请使用 Shift+F 打开生涯面板重新选择职业")
@@ -104,12 +106,12 @@ object DelCareerGUI {
     private fun handleBranchDelete(player: Player, cp: CareerPlayer, index: Int) {
         val branch = cp.unlockedBranches.keys.toList().getOrNull(index) ?: return
 
-        // Remove the branch
         cp.unlockedBranches.remove(branch)
         cp.chosenEurekas.remove(branch)
         cp.resonanceModes.remove(branch)
         cp.autoCastSkills.keys.removeAll { it.startsWith(branch.name) }
         cp.cooldowns.keys.removeAll { it.startsWith(branch.name) }
+        CareerManager.clearHotkeyBindsForBranch(cp, branch)
 
         player.sendMessage("§a✦ 已删除分支：§e${branch.displayName}§a（${branch.careerClass.displayName}）")
 
@@ -118,13 +120,13 @@ object DelCareerGUI {
     }
 
     private fun handleResetAllCareers(player: Player, cp: CareerPlayer) {
-        // Remove everything
         cp.unlockedBranches.clear()
         cp.chosenEurekas.clear()
         cp.resonanceModes.clear()
         cp.selectedClasses.clear()
         cp.autoCastSkills.clear()
         cp.cooldowns.clear()
+        cp.hotkeyBinds.clear()
 
         player.sendMessage("§a✦ 已重置所有职业和分支！")
         player.sendMessage("§7请使用 Shift+F 打开生涯面板重新选择职业")
@@ -133,12 +135,12 @@ object DelCareerGUI {
     }
 
     private fun handleResetAllBranches(player: Player, cp: CareerPlayer) {
-        // Remove branches only, keep career selection
         cp.unlockedBranches.clear()
         cp.chosenEurekas.clear()
         cp.resonanceModes.clear()
         cp.autoCastSkills.clear()
         cp.cooldowns.clear()
+        cp.hotkeyBinds.clear()
 
         player.sendMessage("§a✦ 已重置所有分支（保留职业选择）！")
 

@@ -70,6 +70,8 @@ object CareerDataLoader {
                     val name = eurekaMap["name"] as? String ?: continue
                     val description = eurekaMap["description"] as? String ?: ""
                     val cooldown = (eurekaMap["cooldown"] as? Number)?.toInt() ?: 0
+                    val typeStr = eurekaMap["type"] as? String ?: "PASSIVE"
+                    val skillType = try { SkillType.valueOf(typeStr) } catch (_: Exception) { SkillType.PASSIVE }
 
                     eurekaDefs[id] = EurekaDef(
                         id = id,
@@ -78,7 +80,7 @@ object CareerDataLoader {
                         description = description,
                         branch = branch,
                         effectId = id,
-                        skillType = SkillType.PASSIVE,
+                        skillType = skillType,
                         cooldownSeconds = cooldown
                     )
                 }

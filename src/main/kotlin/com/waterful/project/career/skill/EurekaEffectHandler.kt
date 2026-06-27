@@ -45,7 +45,9 @@ object EurekaEffectHandler {
         // Worker Miner eureka 1: 黑暗适应 → darkness tolerance
         "worker_miner_eureka_1" to ::applyDarkAdapt,
         // Worker Miner eureka 2: 地质学 → locate ores
-        "worker_miner_eureka_2" to ::locateOres
+        "worker_miner_eureka_2" to ::locateOres,
+        "scholar_redstone_eureka_1" to ::targetedPulse,
+        "scholar_redstone_eureka_0" to ::redstoneTorchConvert
     )
 
     fun execute(eurekaId: String, player: Player): Boolean {
@@ -62,7 +64,6 @@ object EurekaEffectHandler {
     // ===== Implementations =====
 
     private fun openEnchantingTable(player: Player) {
-        // Place enchanting table + bookshelves temporarily, open GUI, then clean up
         val loc = player.location.clone()
         val plugin = Bukkit.getPluginManager().getPlugin("StarLightRe") ?: return
         val placedBlocks = mutableListOf<org.bukkit.block.Block>()
@@ -73,30 +74,33 @@ object EurekaEffectHandler {
         tableLoc.block.type = Material.ENCHANTING_TABLE
         placedBlocks.add(tableLoc.block)
 
-        // Place 15 bookshelves for level 30
-        val offsets = listOf(
+        // Standard level-30 bookshelf ring (5×5 with 1-block gap, 15 shelves)
+        // Place at BOTH y (table level) and y+1 (one above) for guaranteed level 30
+        val ringOffsets = listOf(
             -2 to -2, -1 to -2, 0 to -2, 1 to -2, 2 to -2,
             -2 to -1, 2 to -1,
             -2 to 0, 2 to 0,
             -2 to 1, 2 to 1,
             -2 to 2, -1 to 2, 0 to 2, 1 to 2, 2 to 2
         )
-        for ((dx, dz) in offsets) {
-            val shelfLoc = tableLoc.clone().add(dx.toDouble(), 0.0, dz.toDouble())
-            if (shelfLoc.block.type == Material.AIR || shelfLoc.block.type.name.endsWith("_AIR")) {
-                shelfLoc.block.type = Material.BOOKSHELF
-                placedBlocks.add(shelfLoc.block)
+        for (yOff in 0..1) { // Both same level and one above
+            for ((dx, dz) in ringOffsets) {
+                val shelfLoc = tableLoc.clone().add(dx.toDouble(), yOff.toDouble(), dz.toDouble())
+                if (shelfLoc.block.type.isAir) {
+                    shelfLoc.block.type = Material.BOOKSHELF
+                    placedBlocks.add(shelfLoc.block)
+                }
             }
         }
 
-        // Open enchanting GUI via Paper API
+        // Open enchanting GUI
         player.openEnchanting(tableLoc, true)
 
-        // Clean up blocks after GUI closes (next tick)
-        Bukkit.getScheduler().runTask(plugin, Runnable {
+        // Clean up after 2 seconds (after GUI rendering is done)
+        Bukkit.getScheduler().runTaskLater(plugin, Runnable {
             placedBlocks.forEach { it.type = Material.AIR }
             tableLoc.block.type = oldFloor
-        })
+        }, 40L)
         player.sendMessage(Component.text("§5✦ 附魔领域展开：30级附魔台已开启"))
     }
 
@@ -211,6 +215,50 @@ object EurekaEffectHandler {
             player.sendMessage(Component.text("§5✦ 地质学：最近的矿石在 ${found.blockX}, ${found.blockY}, ${found.blockZ} (${found.block.type.name})"))
         } else {
             player.sendMessage(Component.text("§7地质学：周围8格内未发现矿石"))
+        }
+    }
+
+    /** 定点脉冲: 消耗16红石粉，破坏周围4格内所有进阶红石器械 */
+    private fun targetedPulse(player: Player) {
+        // Check and consume 16 redstone dust
+        if (!player.inventory.contains(Material.REDSTONE, 16)) {
+            player.sendMessage(Component.text("§c定点脉冲：需要16个红石粉！"))
+            return
+        }
+        player.inventory.removeItem(ItemStack(Material.REDSTONE, 16))
+
+        val advancedRedstone = setOf(
+            Material.REPEATER, Material.COMPARATOR, Material.PISTON, Material.STICKY_PISTON,
+            Material.OBSERVER, Material.DROPPER, Material.DISPENSER, Material.HOPPER,
+            Material.REDSTONE_BLOCK, Material.REDSTONE_LAMP, Material.DAYLIGHT_DETECTOR,
+            Material.TARGET, Material.LECTERN, Material.NOTE_BLOCK, Material.TRIPWIRE_HOOK
+        )
+
+        var count = 0
+        for (x in -4..4) for (y in -4..4) for (z in -4..4) {
+            val block = player.location.clone().add(x.toDouble(), y.toDouble(), z.toDouble()).block
+            if (block.type in advancedRedstone) {
+                block.breakNaturally()
+                count++
+            }
+        }
+        player.sendMessage(Component.text("§5✦ 定点脉冲：消耗16红石粉，摧毁了${count}个红石器械"))
+    }
+
+    /** 红色炬火: 火把→红石火把 + 攻击25%点燃 */
+    private fun redstoneTorchConvert(player: Player) {
+        // Convert regular torches to redstone torches in inventory
+        var count = 0
+        for (item in player.inventory.contents) {
+            if (item != null && item.type == Material.TORCH) {
+                item.type = Material.REDSTONE_TORCH
+                count++
+            }
+        }
+        if (count > 0) {
+            player.sendMessage(Component.text("§5✦ 红色炬火：${count}个火把已转化为红石火把"))
+        } else {
+            player.sendMessage(Component.text("§5✦ 红色炬火：背包中没有火把可转换（被动：合成台火把→红石火把，攻击25%点燃）"))
         }
     }
 }

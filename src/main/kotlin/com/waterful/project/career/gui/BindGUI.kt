@@ -30,19 +30,13 @@ object BindGUI {
         val cp = CareerManager.getPlayer(player) ?: return
         val inv = Bukkit.createInventory(null, 27, Component.text(TITLE))
 
-        // Collect all available active skills + eurekas
+        // Collect all available active skills only (eurekas are passive, not bindable)
         val availableItems = mutableListOf<Pair<String, String>>()
         for ((branch, skills) in cp.unlockedBranches) {
             for ((index, skill) in skills.withIndex()) {
                 if (skill.skillDef.skillType != SkillType.ACTIVE || skill.currentLevel < 1) continue
                 availableItems.add(
                     "§a技能 §f${skill.skillDef.name} §7(${branch.displayName})" to "${branch.name}:$index"
-                )
-            }
-            // Add eurekas
-            cp.chosenEurekas[branch]?.let { eureka ->
-                availableItems.add(
-                    "§d顿悟 §f${eureka.eurekaDef.name} §7(${branch.displayName})" to "eureka:${branch.name}"
                 )
             }
         }
@@ -53,15 +47,10 @@ object BindGUI {
 
             val icon = when {
                 bindStr != null -> {
-                    val displayName = if (bindStr.startsWith("eureka:")) {
-                        val branch = Branch.fromName(bindStr.removePrefix("eureka:"))
-                        "§d${cp.chosenEurekas[branch]?.eurekaDef?.name ?: "顿悟"}"
-                    } else {
-                        val parts = bindStr.split(":", limit = 2)
-                        val branch = parts.getOrNull(0)?.let { Branch.fromName(it) }
-                        val idx = parts.getOrNull(1)?.toIntOrNull()
-                        branch?.let { b -> idx?.let { cp.getSkill(b, it)?.skillDef?.name } } ?: "?"
-                    }
+                    val parts = bindStr.split(":", limit = 2)
+                    val branch = parts.getOrNull(0)?.let { Branch.fromName(it) }
+                    val idx = parts.getOrNull(1)?.toIntOrNull()
+                    val displayName = branch?.let { b -> idx?.let { cp.getSkill(b, it)?.skillDef?.name } } ?: "?"
                     boundSlotIcon(i, displayName)
                 }
                 i < 3 -> defaultSlotIcon(i, defaultBindings[i]!!)

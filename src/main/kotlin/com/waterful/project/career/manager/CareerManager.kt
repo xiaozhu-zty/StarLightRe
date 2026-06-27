@@ -174,9 +174,10 @@ object CareerManager {
         cp.unlockedBranches.remove(branch)
         cp.chosenEurekas.remove(branch)
         cp.resonanceModes.remove(branch)
-        // Clean up auto-cast and cooldowns for this branch
+        // Clean up auto-cast, cooldowns, and hotkey bindings for this branch
         cp.autoCastSkills.keys.removeAll { it.startsWith(branch.name) }
         cp.cooldowns.keys.removeAll { it.startsWith(branch.name) }
+        clearHotkeyBindsForBranch(cp, branch)
 
         player.sendMessage("§a✦ 已遗忘分支：${branch.displayName}（花费${cost}技能点）")
         return true
@@ -321,4 +322,29 @@ object CareerManager {
             .filter { it.value != ResonanceMode.DISABLED }
             .keys
             .toList()
+
+    /** Remove all hotkey bindings for a specific branch (called on forget) */
+    fun clearHotkeyBindsForBranch(cp: CareerPlayer, branch: Branch) {
+        cp.hotkeyBinds.entries.removeAll { (_, binding) ->
+            binding == "eureka:${branch.name}" || binding.startsWith("${branch.name}:")
+        }
+    }
+
+    /** Validate and clean up all hotkey bindings (remove bindings for lost branches/skills) */
+    fun validateHotkeyBinds(cp: CareerPlayer) {
+        cp.hotkeyBinds.entries.removeAll { (_, binding) ->
+            if (binding.startsWith("eureka:")) {
+                val bName = binding.removePrefix("eureka:")
+                val b = Branch.fromName(bName) ?: return@removeAll true
+                !cp.chosenEurekas.containsKey(b)
+            } else {
+                val parts = binding.split(":", limit = 2)
+                val bName = parts.getOrNull(0) ?: return@removeAll true
+                val idx = parts.getOrNull(1)?.toIntOrNull() ?: return@removeAll true
+                val b = Branch.fromName(bName) ?: return@removeAll true
+                val skill = cp.getSkill(b, idx) ?: return@removeAll true
+                skill.currentLevel < 1
+            }
+        }
+    }
 }

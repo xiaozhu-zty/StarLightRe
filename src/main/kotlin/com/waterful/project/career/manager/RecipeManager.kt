@@ -51,10 +51,9 @@ object RecipeManager {
         )
 
         // === Scholar Redstone Eureka: 红色炬火 — 火把→红石火把 ===
-        registerShaped(
+        registerShapeless(
             plugin, "redstone_red_torch", Material.REDSTONE_TORCH, 1,
-            listOf("R", "T"),
-            mapOf('R' to Material.REDSTONE, 'T' to Material.TORCH)
+            Material.TORCH to 1
         )
 
         // === Architect Demolition Eureka: 末影硝酸甘油 — 6玻璃+3TNT→末地水晶 ===

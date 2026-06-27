@@ -459,6 +459,97 @@ class PassiveSkillListener : Listener {
         drops.forEach { drop -> event.block.world.dropItemNaturally(event.block.location, drop) }
     }
 
+    // ===== ARCHITECT_STRUCTURE skill 1 (识色敏锐): dye crafting bonus (PASSIVE with CD) =====
+
+    private val dyeResults = setOf(
+        Material.RED_DYE, Material.GREEN_DYE, Material.BLUE_DYE, Material.YELLOW_DYE,
+        Material.PURPLE_DYE, Material.CYAN_DYE, Material.LIGHT_GRAY_DYE, Material.GRAY_DYE,
+        Material.PINK_DYE, Material.LIME_DYE, Material.ORANGE_DYE, Material.MAGENTA_DYE,
+        Material.LIGHT_BLUE_DYE, Material.BROWN_DYE, Material.BLACK_DYE, Material.WHITE_DYE
+    )
+
+    @EventHandler
+    fun onCraftDye(event: org.bukkit.event.inventory.CraftItemEvent) {
+        val p = event.whoClicked as? Player ?: return
+        if (!p.hasBranch(Branch.ARCHITECT_STRUCTURE)) return
+        val lv = p.skillLevel(Branch.ARCHITECT_STRUCTURE, 1)
+        if (lv < 1) return
+        val result = event.recipe?.result ?: return
+        if (result.type !in dyeResults) return
+
+        DebugManager.logState(p, "识色敏锐 — 合成${result.type.name}")
+        val cp = p.career() ?: return
+        val now = System.currentTimeMillis()
+        val cdSeconds = com.waterful.project.career.data.CareerDataLoader.getSkill("architect_structure_skill_1")?.getCooldown(lv) ?: 20
+        if (cp.isOnCooldown("architect_structure_skill_1", cdSeconds, now)) {
+            DebugManager.logState(p, "识色敏锐 — CD冷却中(${cp.getRemainingCooldown("architect_structure_skill_1", cdSeconds, now)}秒)")
+            return
+        }
+        val bonus = when (lv) { 1 -> 1; 2 -> 1; 3 -> 2; else -> 1 }
+        p.inventory.addItem(ItemStack(result.type, bonus))
+        cp.setCooldown("architect_structure_skill_1", now)
+        DebugManager.logState(p, "识色敏锐 — 获得${bonus}个${result.type.name}")
+    }
+
+    // ===== SCHOLAR_REDSTONE skill 1 (自动化生产): redstone craft bonus (PASSIVE with CD) =====
+
+    private val redstoneCrafts = setOf(
+        Material.REDSTONE, Material.REPEATER, Material.COMPARATOR,
+        Material.PISTON, Material.STICKY_PISTON, Material.OBSERVER,
+        Material.DROPPER, Material.DISPENSER, Material.HOPPER,
+        Material.REDSTONE_TORCH, Material.REDSTONE_BLOCK, Material.DAYLIGHT_DETECTOR
+    )
+
+    @EventHandler
+    fun onCraftRedstone(event: org.bukkit.event.inventory.CraftItemEvent) {
+        val p = event.whoClicked as? Player ?: return
+        if (!p.hasBranch(Branch.SCHOLAR_REDSTONE)) return
+        val lv = p.skillLevel(Branch.SCHOLAR_REDSTONE, 1)
+        if (lv < 1) return
+        val result = event.recipe?.result ?: return
+        if (result.type !in redstoneCrafts) return
+
+        val cp = p.career() ?: return
+        val now = System.currentTimeMillis()
+        val cdSeconds = 240
+        if (cp.isOnCooldown("scholar_redstone_skill_1", cdSeconds, now)) {
+            DebugManager.logState(p, "自动化生产 — CD冷却中")
+            return
+        }
+
+        DebugManager.logState(p, "自动化生产 — 合成${result.type.name}")
+        val chance = lv * 10 // Lv.1=10%, Lv.2=20%, Lv.3=30%
+        if (DebugManager.rollChance(p, chance, "自动化生产·Lv.$lv 额外获得${result.type.name}")) {
+            p.inventory.addItem(ItemStack(result.type, 1))
+            cp.setCooldown("scholar_redstone_skill_1", now)
+        }
+    }
+
+    // ===== WORKER_TOOLMAKER skill 1 (熟能生巧): anvil use bonus (PASSIVE with CD) =====
+
+    @EventHandler
+    fun onAnvilUse(event: org.bukkit.event.inventory.InventoryClickEvent) {
+        if (event.inventory.type != org.bukkit.event.inventory.InventoryType.ANVIL) return
+        if (event.slot != 2) return
+        val p = event.whoClicked as? Player ?: return
+        if (!p.hasBranch(Branch.WORKER_TOOLMAKER)) return
+        val lv = p.skillLevel(Branch.WORKER_TOOLMAKER, 1)
+        if (lv < 1) return
+
+        DebugManager.logState(p, "熟能生巧 — 使用铁砧")
+        val cp = p.career() ?: return
+        val now = System.currentTimeMillis()
+        val cdSeconds = 480
+        if (cp.isOnCooldown("worker_toolmaker_skill_1", cdSeconds, now)) {
+            DebugManager.logState(p, "熟能生巧 — CD冷却中")
+            return
+        }
+        val exp = when (lv) { 1 -> 4; 2 -> 6; 3 -> 8; else -> 4 }
+        p.giveExp(exp)
+        cp.setCooldown("worker_toolmaker_skill_1", now)
+        DebugManager.logState(p, "熟能生巧 — 获得${exp}经验等级")
+    }
+
     // ===== ARCHITECT_STRUCTURE skill 0 (高效回收): flint&steel always works, explosion reduction =====
 
     @EventHandler

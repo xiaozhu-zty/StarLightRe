@@ -27,8 +27,12 @@ class CareerGateListener : Listener {
 
     // ========== RECIPE GATING ==========
 
-    private val redstoneGatedRecipes: Set<Material> = setOf(
-        Material.HOPPER, Material.DISPENSER, Material.DROPPER
+    /** All advanced redstone components — only Redstone Engineer can craft/place */
+    private val redstoneGated: Set<Material> = setOf(
+        Material.HOPPER, Material.DISPENSER, Material.DROPPER,
+        Material.REPEATER, Material.COMPARATOR, Material.PISTON, Material.STICKY_PISTON,
+        Material.OBSERVER, Material.REDSTONE_BLOCK, Material.REDSTONE_LAMP,
+        Material.DAYLIGHT_DETECTOR, Material.TARGET, Material.NOTE_BLOCK
     )
 
     private val toolmakerGatedRecipes: Set<Material> = setOf(
@@ -56,8 +60,8 @@ class CareerGateListener : Listener {
         val resultType = result.type
         val debug = DebugManager.isListening(player.uniqueId)
 
-        // Check redstone-engineered items
-        if (resultType in redstoneGatedRecipes) {
+        // Check redstone-engineered items (craft + place)
+        if (resultType in redstoneGated) {
             if (CareerManager.hasBranch(cp, Branch.SCHOLAR_REDSTONE)) {
                 if (debug) player.sendMessage(debugPass("红石工程师", resultType.name))
             } else {
@@ -99,6 +103,43 @@ class CareerGateListener : Listener {
                 return
             }
         }
+    }
+
+    // ========== REDSTONE PLACEMENT GATING ==========
+
+    @EventHandler(priority = EventPriority.LOW)
+    fun onPlaceRedstoneComponent(event: org.bukkit.event.block.BlockPlaceEvent) {
+        if (event.block.type !in redstoneGated) return
+        val player = event.player
+        val cp = CareerManager.getPlayer(player) ?: return
+        if (CareerManager.hasBranch(cp, Branch.SCHOLAR_REDSTONE)) return
+        event.isCancelled = true
+        val debug = DebugManager.isListening(player.uniqueId)
+        player.sendMessage(if (debug) debugFail("红石工程师", event.block.type.name) else gateMsg("红石工程师"))
+    }
+
+    // ========== ANVIL ENCHANT COMBINING GATING (附魔师) ==========
+
+    @EventHandler(priority = EventPriority.LOW)
+    fun onAnvilResult(event: org.bukkit.event.inventory.InventoryClickEvent) {
+        if (event.inventory.type != org.bukkit.event.inventory.InventoryType.ANVIL) return
+        if (event.slot != 2) return // Result slot
+        val player = event.whoClicked as? Player ?: return
+        val cp = CareerManager.getPlayer(player) ?: return
+        if (CareerManager.hasBranch(cp, Branch.SCHOLAR_ENCHANTER)) return
+
+        // Check if the anvil operation involves enchant combining (has second item or enchanted book)
+        val anvilInv = event.inventory
+        val firstItem = anvilInv.getItem(0)
+        val secondItem = anvilInv.getItem(1)
+
+        val isEnchantOp = (secondItem != null && secondItem.type != Material.AIR) &&
+            (firstItem?.enchantments?.isNotEmpty() == true || secondItem.type == Material.ENCHANTED_BOOK)
+        if (!isEnchantOp) return // Allow renaming and simple repairs
+
+        event.isCancelled = true
+        val debug = DebugManager.isListening(player.uniqueId)
+        player.sendMessage(if (debug) debugFail("附魔师", "铁砧附魔组合") else gateMsg("附魔师"))
     }
 
     // ========== FURNACE FUEL GATING (烧炼师) ==========
@@ -239,18 +280,7 @@ class CareerGateListener : Listener {
                     if (debug) player.sendMessage(debugPass("附魔师", "砂轮"))
                 }
             }
-            Material.ANVIL, Material.CHIPPED_ANVIL, Material.DAMAGED_ANVIL -> {
-                if (!CareerManager.hasBranch(cp, Branch.SCHOLAR_ENCHANTER)) {
-                    val held = player.inventory.itemInMainHand
-                    if (held.type != Material.AIR) {
-                        event.isCancelled = true
-                        player.sendMessage(if (debug) debugFail("附魔师", "铁砧") else gateMsg("附魔师"))
-                        return
-                    }
-                } else {
-                    if (debug) player.sendMessage(debugPass("附魔师", "铁砧"))
-                }
-            }
+            // Anvil: allow opening for all, gating done on result click (see onAnvilResult)
             // 堡垒/结构工程师
             Material.STONECUTTER -> {
                 if (!CareerManager.hasBranch(cp, Branch.ARCHITECT_FORTRESS) &&

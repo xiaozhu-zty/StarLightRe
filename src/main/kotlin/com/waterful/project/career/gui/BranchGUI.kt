@@ -195,14 +195,10 @@ object BranchGUI {
                 if (unlocked) NamedTextColor.GREEN else NamedTextColor.RED
             ))
             val desc = mutableListOf<Component>()
-            desc.add(Component.text("状态：${if (unlocked) "已解锁" else "未解锁"}", if (unlocked) NamedTextColor.GREEN else NamedTextColor.RED))
-            if (unlocked) {
-                desc.add(Component.text(""))
-                desc.add(Component.text("效果：", NamedTextColor.GOLD))
-                desc.addAll(IconFactory.wrapLore(skill.skillDef.getDescription(displayLevel), NamedTextColor.GRAY))
-            } else {
-                desc.add(Component.text("需要升级到此等级", NamedTextColor.GRAY))
-            }
+            desc.add(Component.text("状态：${if (unlocked) "✦ 已解锁" else "未解锁"}", if (unlocked) NamedTextColor.GREEN else NamedTextColor.RED))
+            desc.add(Component.text(""))
+            desc.add(Component.text("效果：", NamedTextColor.GOLD))
+            desc.addAll(IconFactory.wrapLore(skill.skillDef.getDescription(displayLevel), NamedTextColor.GRAY))
             it.lore(desc)
         }
         return item

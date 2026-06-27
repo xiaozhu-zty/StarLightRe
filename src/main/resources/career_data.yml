@@ -20,13 +20,13 @@ careers:
               - "获得掉落物"
           - id: "architect_structure_skill_1"
             name: "识色敏锐"
-            type: ACTIVE
+            type: PASSIVE
             icon: "RED_DYE"
             cooldown: [20, 20, 20]
             levels:
-              - "1个同种染色方块"
-              - "此技能CD-5"
-              - "2个同种染色方块"
+              - "合成染料时(CD:20秒)额外获得1个同种染料"
+              - "合成染料时(CD:15秒)额外获得1个同种染料"
+              - "合成染料时(CD:15秒)额外获得2个同种染料"
           - id: "architect_structure_skill_2"
             name: "凌空创想"
             type: ACTIVE
@@ -89,11 +89,13 @@ careers:
             description: "受到摔落伤害时，2格内的所有玩家同样受到此伤害（触发技能1的免伤时不触发，触发技能1的伤害减免时按减免后的伤害结算）"
           - id: "architect_fortress_eureka_1"
             name: "淬炼固化"
+            type: ACTIVE
             icon: "OBSIDIAN"
             cooldown: 0
             description: "在指针位置5格召唤两堵8*1*3的十字黑曜石墙，15秒后黑曜石墙自动摧毁（黑曜石墙仅可替换空气方块，若遇其他方块则不会替换之）"
           - id: "architect_fortress_eureka_2"
             name: "便携式切石机"
+            type: ACTIVE
             icon: "STONECUTTER"
             cooldown: 0
             description: "可随时打开切石机面板"
@@ -139,6 +141,7 @@ careers:
             description: "①4铁锭（位于四角）+1木棍（中心）→16铁轨；②6铜锭（左右两列）+1木棍（中心）→16铁轨（摆放样式同原铁轨合成样式）"
           - id: "architect_traffic_eureka_2"
             name: "游弋信风"
+            type: ACTIVE
             icon: "HEART_OF_THE_SEA"
             cooldown: 0
             description: "获得30秒的海豚的恩惠II；如果位于海洋生物群系，则改为获得45秒的海豚的恩惠III"
@@ -184,6 +187,7 @@ careers:
             description: "6玻璃块（位于最左与最右列）+3TNT→末地水晶"
           - id: "architect_demolition_eureka_2"
             name: "手摇TNT火炮"
+            type: ACTIVE
             icon: "TIPPED_ARROW"
             cooldown: 0
             description: "持续30秒。期间使用弓射出的每一箭都将变为已点燃的TNT。这些TNT不会破坏方块"
@@ -228,6 +232,7 @@ careers:
             description: "玻璃瓶+下界疣*3→粗制的药水"
           - id: "chef_brewer_eureka_1"
             name: "过量服用"
+            type: ACTIVE
             icon: "FERMENTED_SPIDER_EYE"
             cooldown: 0
             description: "持续60秒。立即使自身目前所有的状态效果等级+1，技能结束后获得8秒中毒II"
@@ -313,6 +318,7 @@ careers:
         eurekas:
           - id: "chef_butcher_eureka_0"
             name: "血腥屠宰者"
+            type: ACTIVE
             icon: "GOLDEN_AXE"
             cooldown: 0
             description: "对准某一生物（不能是玩家）使用，使该生物获得60秒的发光和虚弱II；若在期间击杀该生物，则获得25经验值"
@@ -323,6 +329,7 @@ careers:
             description: "1个对应的生肉"
           - id: "chef_butcher_eureka_2"
             name: "追猎"
+            type: ACTIVE
             icon: "IRON_HORSE_ARMOR"
             cooldown: 120
             description: "+6"
@@ -363,6 +370,7 @@ careers:
             description: "8金块+1苹果→附魔金苹果"
           - id: "chef_master_eureka_1"
             name: "配方传承"
+            type: ACTIVE
             icon: "ENCHANTED_GOLDEN_APPLE"
             cooldown: 0
             description: "立即使周围8格内所有【厨师】职业玩家（包括自己）的所有技能（不包括顿悟）CD-20"
@@ -412,11 +420,13 @@ careers:
             description: "8青金石+1玻璃瓶→附魔之瓶"
           - id: "scholar_enchanter_eureka_1"
             name: "附魔领域展开"
+            type: ACTIVE
             icon: "DIAMOND"
             cooldown: 0
             description: "可随时打开30级附魔台面板"
           - id: "scholar_enchanter_eureka_2"
             name: "禁术褫夺"
+            type: ACTIVE
             icon: "ENDER_EYE"
             cooldown: 0
             description: "对准某一玩家使用，使其获得20秒虚弱I；仅触发一次：若期间其被点燃且不具有抗火，则随机去除其任意一件盔甲的所有附魔"
@@ -433,13 +443,13 @@ careers:
               - "放置红石粉时有8%概率不消耗"
           - id: "scholar_redstone_skill_1"
             name: "自动化生产"
-            type: ACTIVE
+            type: PASSIVE
             icon: "PISTON"
             cooldown: [240, 240, 240]
             levels:
-              - "1个产物"
-              - "1个产物"
-              - "1个产物"
+              - "合成红石器械时有10%概率额外获得1个相同零件(CD:240秒)"
+              - "合成红石器械时有20%概率额外获得1个相同零件(CD:240秒)"
+              - "合成红石器械时有30%概率额外获得1个相同零件(CD:240秒)"
           - id: "scholar_redstone_skill_2"
             name: "超载"
             type: ACTIVE
@@ -457,11 +467,13 @@ careers:
             description: "火把→红石火把；使用红石火把攻击时有25%概率点燃对方"
           - id: "scholar_redstone_eureka_1"
             name: "定点脉冲"
+            type: ACTIVE
             icon: "REDSTONE_LAMP"
             cooldown: 0
             description: "消耗16红石粉，破坏自身周围4格内所有进阶红石器械"
           - id: "scholar_redstone_eureka_2"
             name: "雷霆之杖"
+            type: ACTIVE
             icon: "LIGHTNING_ROD"
             cooldown: 0
             description: "仅当手持避雷针时触发：有10%概率在前方召唤一道闪电，若失败则避雷针消失；当天气为降雨时成功概率上升至20%；当天气为雷暴时成功概率上升至33%"
@@ -542,6 +554,7 @@ careers:
         eurekas:
           - id: "scholar_teacher_eureka_0"
             name: "诲人不倦"
+            type: ACTIVE
             icon: "ECHO_SHARD"
             cooldown: 0
             description: "仅当处于讲台周围3格时可触发：获得20经验"
@@ -601,6 +614,7 @@ careers:
             description: "每次钓鱼成功时额外获得1~6点经验"
           - id: "farmer_fisherman_eureka_2"
             name: "凝望反制"
+            type: ACTIVE
             icon: "GUARDIAN_SPAWN_EGG"
             cooldown: 0
             description: "持续30秒。立即清除挖掘疲劳效果，受到来自守卫者、远古守卫者的伤害-6"
@@ -780,6 +794,7 @@ careers:
             description: "脚手架"
           - id: "worker_lumberjack_eureka_1"
             name: "护林员"
+            type: ACTIVE
             icon: "CAMPFIRE"
             cooldown: 0
             description: "使指针处半径为5的球形区域内所有火熄灭"
@@ -830,6 +845,7 @@ careers:
             description: "黑暗环境耐受时间+10s，受到黑暗环境的伤害-1"
           - id: "worker_miner_eureka_2"
             name: "地质学"
+            type: ACTIVE
             icon: "COMPASS"
             cooldown: 0
             description: "立即获知8格内距自己最近的金矿石或钻石矿石或绿宝石矿石或远古残骸的坐标"
@@ -891,13 +907,13 @@ careers:
               - "使用锻造台时，有20%概率不消耗下界合金锭"
           - id: "worker_toolmaker_skill_1"
             name: "熟能生巧"
-            type: ACTIVE
+            type: PASSIVE
             icon: "ANVIL"
             cooldown: [480, 480, 480]
             levels:
-              - "下次使用铁砧时，若消耗的经验等级≥8，则获得4经验等级"
-              - "下次使用铁砧时，若消耗的经验等级≥8，则获得6经验等级"
-              - "下次使用铁砧时，若消耗的经验等级≥8，则获得8经验等级"
+              - "使用铁砧时(CD:480秒)额外获得4经验等级"
+              - "使用铁砧时(CD:480秒)额外获得6经验等级"
+              - "使用铁砧时(CD:480秒)额外获得8经验等级"
           - id: "worker_toolmaker_skill_2"
             name: "关键结构加固"
             type: PASSIVE
@@ -915,6 +931,7 @@ careers:
             description: "使用锻造台时，有20%概率+1经验等级"
           - id: "worker_toolmaker_eureka_1"
             name: "应急工具箱"
+            type: ACTIVE
             icon: "CHEST"
             cooldown: 0
             description: "消耗1经验等级，在指针处生成一个箱子，其中装有一整套的铁工具和1个铁桶"
@@ -1059,6 +1076,7 @@ careers:
             description: "在夜晚时不再受黑暗环境影响，但在白天时生命上限-12（持续获得-3级的生命提升）"
           - id: "warrior_hunter_eureka_2"
             name: "圣洁泉源"
+            type: ACTIVE
             icon: "GLOWSTONE"
             cooldown: 0
             description: "清除周围4格内所有玩家的负面效果"
