@@ -1,5 +1,6 @@
 package com.waterful.project.career.listener
 
+import com.waterful.project.career.CareerItems
 import com.waterful.project.career.manager.CareerManager
 import com.waterful.project.career.manager.DebugManager
 import com.waterful.project.career.model.Branch
@@ -52,9 +53,27 @@ class CareerGateListener : Listener {
         Material.SUSPICIOUS_STEW
     )
 
-    @EventHandler(priority = EventPriority.LOW)
+    private fun isScrollProtected(event: org.bukkit.event.inventory.InventoryClickEvent): Boolean {
+        val player = event.whoClicked as? Player ?: return false
+        val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") as? org.bukkit.plugin.java.JavaPlugin ?: return false
+        // Check all items in the crafting/smithing/etc grid for the scroll
+        for (item in event.inventory.contents) {
+            if (item != null && CareerItems.isScroll(plugin, item)) return true
+        }
+        // Also check cursor
+        event.cursor?.let { if (CareerItems.isScroll(plugin, it)) return true }
+        return false
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
     fun onCraftItem(event: CraftItemEvent) {
         val player = event.whoClicked as? Player ?: return
+        // Block scroll from crafting
+        if (isScrollProtected(event)) {
+            event.isCancelled = true
+            player.sendMessage("§c技能卷轴无法用于合成！")
+            return
+        }
         val result = event.recipe?.result ?: return
         val cp = CareerManager.getPlayer(player) ?: return
         val resultType = result.type
@@ -118,12 +137,40 @@ class CareerGateListener : Listener {
         player.sendMessage(if (debug) debugFail("红石工程师", event.block.type.name) else gateMsg("红石工程师"))
     }
 
+    // ========== SCROLL PROTECTION (grindstone, smithing) ==========
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    fun onGrindstoneScroll(event: org.bukkit.event.inventory.InventoryClickEvent) {
+        if (event.inventory.type != org.bukkit.event.inventory.InventoryType.GRINDSTONE) return
+        if (event.slot != 2) return
+        if (isScrollProtected(event)) {
+            event.isCancelled = true
+            (event.whoClicked as? Player)?.sendMessage("§c技能卷轴无法在砂轮中使用！")
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    fun onSmithingScroll(event: org.bukkit.event.inventory.InventoryClickEvent) {
+        if (event.inventory.type != org.bukkit.event.inventory.InventoryType.SMITHING) return
+        if (event.slot != 2 && event.slot != 3) return // Result slots
+        if (isScrollProtected(event)) {
+            event.isCancelled = true
+            (event.whoClicked as? Player)?.sendMessage("§c技能卷轴无法在锻造台中使用！")
+        }
+    }
+
     // ========== ANVIL ENCHANT COMBINING GATING (附魔师) ==========
 
-    @EventHandler(priority = EventPriority.LOW)
+    @EventHandler(priority = EventPriority.LOWEST)
     fun onAnvilResult(event: org.bukkit.event.inventory.InventoryClickEvent) {
         if (event.inventory.type != org.bukkit.event.inventory.InventoryType.ANVIL) return
         if (event.slot != 2) return // Result slot
+        // Block scroll usage
+        if (isScrollProtected(event)) {
+            event.isCancelled = true
+            (event.whoClicked as? Player)?.sendMessage("§c技能卷轴无法在铁砧中使用！")
+            return
+        }
         val player = event.whoClicked as? Player ?: return
         val cp = CareerManager.getPlayer(player) ?: return
         if (CareerManager.hasBranch(cp, Branch.SCHOLAR_ENCHANTER)) return

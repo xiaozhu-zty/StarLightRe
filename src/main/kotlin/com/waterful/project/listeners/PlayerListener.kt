@@ -1,5 +1,6 @@
 package com.waterful.project.listeners
 
+import com.waterful.project.career.CareerItems
 import com.waterful.project.career.gui.CareerGUI
 import com.waterful.project.career.manager.AntiFarmManager
 import com.waterful.project.career.manager.CareerManager
@@ -24,6 +25,15 @@ class PlayerListener : Listener {
         val player = event.player
         val cp = CareerManager.loadPlayer(player.uniqueId, player.name)
         CareerManager.validateHotkeyBinds(cp) // Clean stale bindings
+
+        // Give career scroll if not present
+        val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") as? org.bukkit.plugin.java.JavaPlugin
+        if (plugin != null) {
+            val hasScroll = player.inventory.any { it != null && CareerItems.isScroll(plugin, it) }
+            if (!hasScroll) {
+                player.inventory.addItem(CareerItems.createScroll(plugin))
+            }
+        }
 
         if (!cp.isCareerSelected) {
             val assigned = AntiFarmManager.assignClassesOnJoin(player)
@@ -63,54 +73,86 @@ class PlayerListener : Listener {
         AntiFarmManager.handleRespawn(event.player)
     }
 
-    // ===== Hotkey: Shift+F → Career Panel =====
+    // ===== Hotkey: F (Swap) → Career Panel (Shift) or Release (Scroll Mode) =====
 
     @EventHandler
     fun onPlayerSwapHandItems(event: PlayerSwapHandItemsEvent) {
-        if (event.player.isSneaking) {
+        val p = event.player
+        val cp = CareerManager.getPlayer(p) ?: return
+
+        // Scroll mode: offhand scroll + F = release bound skill for current slot
+        if (cp.scrollMode) {
+            val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") as? org.bukkit.plugin.java.JavaPlugin
+            if (plugin != null) {
+                val offhand = p.inventory.itemInOffHand
+                if (offhand.type != org.bukkit.Material.AIR && CareerItems.isScroll(plugin, offhand)) {
+                    event.isCancelled = true
+                    val slot = p.inventory.heldItemSlot // 0-8
+                    val bindStr = cp.hotkeyBinds[slot]
+                    if (bindStr != null) {
+                        executeBinding(p, cp, bindStr)
+                    }
+                    return
+                }
+            }
+        }
+
+        // Default: Shift+F → Career Panel
+        if (p.isSneaking) {
             event.isCancelled = true
-            CareerGUI.open(event.player)
+            CareerGUI.open(p)
         }
     }
 
-    // ===== Hotkey: Shift+1~9 → bound skills / eurekas / GUIs =====
+    private fun executeBinding(p: org.bukkit.entity.Player, cp: com.waterful.project.career.model.CareerPlayer, bindStr: String) {
+        if (bindStr.startsWith("eureka:")) {
+            val branch = com.waterful.project.career.model.Branch.fromName(bindStr.removePrefix("eureka:"))
+            if (branch != null && cp.chosenEurekas.containsKey(branch)) {
+                EurekaEffectHandler.execute(cp.chosenEurekas[branch]!!.eurekaDef.id, p)
+            }
+            return
+        }
+        val parts = bindStr.split(":", limit = 2)
+        val branchName = parts.getOrNull(0) ?: return
+        val skillIndex = parts.getOrNull(1)?.toIntOrNull() ?: return
+        val branch = com.waterful.project.career.model.Branch.fromName(branchName) ?: return
+        val skill = cp.getSkill(branch, skillIndex) ?: return
+        if (skill.currentLevel > 0) SkillExecutor.executeSkill(p, skill)
+    }
+
+    // ===== Career Scroll: right-click → open CareerGUI =====
+
+    @EventHandler
+    fun onScrollUse(event: org.bukkit.event.player.PlayerInteractEvent) {
+        if (event.action != org.bukkit.event.block.Action.RIGHT_CLICK_AIR &&
+            event.action != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return
+        val player = event.player
+        val item = player.inventory.itemInMainHand
+        val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") as? org.bukkit.plugin.java.JavaPlugin ?: return
+        if (!CareerItems.isScroll(plugin, item)) return
+        event.isCancelled = true
+        CareerGUI.open(player)
+    }
+
+    // ===== Hotkey: Shift+1~9 → bound skills / GUIs (Shift mode only) =====
 
     @EventHandler
     fun onPlayerItemHeld(event: org.bukkit.event.player.PlayerItemHeldEvent) {
         val player = event.player
         if (!player.isSneaking) return
-        event.isCancelled = true
-
-        val numKey = event.newSlot + 1 // 1-9
         val cp = CareerManager.getPlayer(player) ?: return
+
+        // Scroll mode: don't intercept hotbar switching
+        if (cp.scrollMode) return
+
+        event.isCancelled = true
+        val numKey = event.newSlot + 1 // 1-9
 
         // Check custom binding
         val bindStr = cp.hotkeyBinds[numKey - 1]
         if (bindStr != null) {
-            // ACTIVE eureka binding: "eureka:branchName"
-            if (bindStr.startsWith("eureka:")) {
-                val branchName = bindStr.removePrefix("eureka:")
-                val branch = com.waterful.project.career.model.Branch.fromName(branchName)
-                if (branch != null && cp.chosenEurekas.containsKey(branch)) {
-                    val eureka = cp.chosenEurekas[branch]!!
-                    EurekaEffectHandler.execute(eureka.eurekaDef.id, player)
-                    return
-                }
-            }
-            // Skill binding: "branchName:skillIndex"
-            val parts = bindStr.split(":", limit = 2)
-            val branchName = parts.getOrNull(0)
-            val skillIndex = parts.getOrNull(1)?.toIntOrNull()
-            if (branchName != null && skillIndex != null) {
-                val branch = com.waterful.project.career.model.Branch.fromName(branchName)
-                if (branch != null) {
-                    val skill = cp.getSkill(branch, skillIndex)
-                    if (skill != null && skill.currentLevel > 0) {
-                        SkillExecutor.executeSkill(player, skill)
-                        return
-                    }
-                }
-            }
+            executeBinding(player, cp, bindStr)
+            return
         }
 
         // Fallback: default GUI hotkeys
@@ -122,9 +164,11 @@ class PlayerListener : Listener {
     }
 
     private fun showHotkeyHint(player: org.bukkit.entity.Player) {
-        player.sendMessage(
-            Component.text("热键：Shift+F 生涯面板 | Shift+2 绑定面板 | Shift+1~9 自定义技能/顿悟",
-                NamedTextColor.GRAY)
-        )
+        val cp = CareerManager.getPlayer(player)
+        val hint = if (cp?.scrollMode == true)
+            "§7卷轴模式：副手卷轴 + 切换槽位 + F = 释放 | Shift+F = 生涯"
+        else
+            "§7Shift模式：Shift+F 生涯 | Shift+2 绑定 | Shift+1~9 释放"
+        player.sendMessage(hint)
     }
 }

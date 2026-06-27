@@ -6,6 +6,7 @@ import com.waterful.project.career.manager.ConfirmManager
 import com.waterful.project.career.model.Branch
 import com.waterful.project.career.model.CareerClass
 import com.waterful.project.career.model.CareerPlayer
+import com.waterful.project.career.model.ResonanceMode
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
@@ -13,22 +14,15 @@ import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.ItemMeta
+import java.util.UUID
 
-/**
- * Career main panel — layout matching StarLightCore reference.
- *
- * Shape (6 rows × 9 cols):
- *   F F F F F F F F F
- *   F C C C F B G R F    C=career class icons (2×3 grid)
- *   F C C C F B G R F    B=branches  G=resonate  R=forget
- *   F F F F F B G R F
- *   F H T I F B G R F    H=shortcut bind  T=resonate type  I=resonate info
- *   F F F F F F F F F
- */
 object CareerGUI {
 
     const val TITLE = "生涯主面板"
+
+    private val viewingClass = mutableMapOf<UUID, CareerClass>()
+
+    fun cleanup(player: Player) { viewingClass.remove(player.uniqueId) }
 
     fun open(player: Player) {
         val cp = CareerManager.getPlayer(player) ?: run {
@@ -36,227 +30,244 @@ object CareerGUI {
         }
 
         val inv = Bukkit.createInventory(null, 54, Component.text(TITLE))
-        fillFrame(inv)
 
-        // --- Row 1-2 (slots 10-12, 19-21): Career class icons ---
+        // Default to first selected class
+        val viewClass = viewingClass[player.uniqueId]?.takeIf { cp.selectedClasses.contains(it) }
+            ?: cp.selectedClasses.firstOrNull()
+
+        // Career class grid (slots 10-12, 19-21)
         val classGrid = listOf(10, 11, 12, 19, 20, 21)
         CareerClass.entries.forEachIndexed { i, clazz ->
             val selected = cp.selectedClasses.contains(clazz)
-            inv.setItem(classGrid[i], careerClassIcon(clazz, selected, cp))
+            val isViewing = (clazz == viewClass)
+            inv.setItem(classGrid[i], classIcon(clazz, selected, cp, isViewing))
         }
 
-        // --- Right column: branches (slots 14,23,32,41) ---
-        val firstClass = cp.selectedClasses.firstOrNull()
-        if (firstClass != null) {
-            val branches = Branch.fromCareerClass(firstClass)
+        // Right side — only after selection complete
+        if (cp.isCareerSelected && viewClass != null) {
+            viewingClass[player.uniqueId] = viewClass
+            val branches = Branch.fromCareerClass(viewClass)
             val branchSlots = listOf(14, 23, 32, 41)
+            val resSlots = listOf(15, 24, 33, 42)
+            val forgetSlots = listOf(16, 25, 34, 43)
+
             branches.forEachIndexed { i, branch ->
-                inv.setItem(branchSlots[i], branchButton(branch, cp))
+                inv.setItem(branchSlots[i], branchIcon(branch, cp))
+                inv.setItem(resSlots[i], resonateIcon(branch, cp))
+                inv.setItem(forgetSlots[i], forgetIcon(branch, cp))
             }
+
+            inv.setItem(37, shortcutIcon(cp))
+            inv.setItem(38, resonateTypeIcon(cp))
+            inv.setItem(39, resonateInfoIcon(cp))
         }
 
-        // --- Resonate (slots 15,24,33,42) ---
-        val resonateSlots = listOf(15, 24, 33, 42)
-        if (firstClass != null) {
-            Branch.fromCareerClass(firstClass).forEachIndexed { i, branch ->
-                val mode = cp.getResonanceMode(branch)
-                inv.setItem(resonateSlots[i], resonateButton(branch, mode))
-            }
-        }
-
-        // --- Forget (slots 16,25,34,43) ---
-        val forgetSlots = listOf(16, 25, 34, 43)
-        if (firstClass != null) {
-            Branch.fromCareerClass(firstClass).forEachIndexed { i, branch ->
-                val has = CareerManager.hasBranch(cp, branch)
-                inv.setItem(forgetSlots[i], forgetButton(branch, cp, has))
-            }
-        }
-
-        // --- Bottom row: shortcut, resonate type, resonate info ---
-        inv.setItem(37, shortcutBindButton(cp))
-        inv.setItem(38, resonateTypeButton(cp))
-        inv.setItem(39, resonateInfoButton(cp))
-
+        inv.setItem(40, scrollIcon(player))
+        fillFrame(inv)
         player.openInventory(inv)
     }
 
     fun handleClick(player: Player, slot: Int, inv: org.bukkit.inventory.Inventory): Boolean {
         val cp = CareerManager.getPlayer(player) ?: return false
+        val viewClass = viewingClass[player.uniqueId]
 
         when {
-            // Career class grid
+            // Class grid — left = view, right/shift = open detail
             slot in listOf(10, 11, 12, 19, 20, 21) -> {
                 val idx = listOf(10, 11, 12, 19, 20, 21).indexOf(slot)
                 val clazz = CareerClass.entries.getOrNull(idx) ?: return true
                 if (cp.selectedClasses.contains(clazz)) {
-                    player.closeInventory(); ClassGUI.open(player, clazz)
+                    viewingClass[player.uniqueId] = clazz
+                    refresh(player)
                 } else if (!cp.isCareerSelected) {
                     CareerManager.selectThirdClass(player, clazz)
-                    player.closeInventory(); open(player)
+                    refresh(player)
                 }
-                return true
             }
-            // Branch buttons
+            // Branch — view detail / unlock
             slot in listOf(14, 23, 32, 41) -> {
-                val idx = listOf(14, 23, 32, 41).indexOf(slot)
-                val clazz = cp.selectedClasses.firstOrNull() ?: return true
-                val branch = Branch.fromCareerClass(clazz).getOrNull(idx) ?: return true
+                val branch = getBranchForSlot(viewClass, slot, listOf(14, 23, 32, 41)) ?: return true
                 if (CareerManager.hasBranch(cp, branch)) {
                     player.closeInventory(); BranchGUI.open(player, branch)
                 } else {
-                    CareerManager.unlockBranch(player, branch)
-                    player.closeInventory(); open(player)
+                    CareerManager.unlockBranch(player, branch); refresh(player)
                 }
-                return true
             }
-            // Resonate
+            // Resonate — toggle
             slot in listOf(15, 24, 33, 42) -> {
-                val idx = listOf(15, 24, 33, 42).indexOf(slot)
-                val clazz = cp.selectedClasses.firstOrNull() ?: return true
-                val branch = Branch.fromCareerClass(clazz).getOrNull(idx) ?: return true
-                player.closeInventory(); ResonanceGUI.open(player, branch)
-                return true
+                val branch = getBranchForSlot(viewClass, slot, listOf(15, 24, 33, 42)) ?: return true
+                if (!CareerManager.hasBranch(cp, branch)) {
+                    player.sendMessage("§c请先解锁该分支！"); return true
+                }
+                cp.resonantBranch = if (cp.resonantBranch == branch) null else branch
+                cp.resonanceModes.putIfAbsent(branch, ResonanceMode.FRIENDLY)
+                player.sendMessage("§a共生共鸣分支：${cp.resonantBranch?.displayName ?: "无"}")
+                refresh(player)
             }
-            // Forget branch — requires double-confirm
+            // Forget — confirm then execute
             slot in listOf(16, 25, 34, 43) -> {
-                val idx = listOf(16, 25, 34, 43).indexOf(slot)
-                val clazz = cp.selectedClasses.firstOrNull() ?: return true
-                val branch = Branch.fromCareerClass(clazz).getOrNull(idx) ?: return true
+                val branch = getBranchForSlot(viewClass, slot, listOf(16, 25, 34, 43)) ?: return true
+                if (!CareerManager.hasBranch(cp, branch)) { player.sendMessage("§c未解锁该分支！"); return true }
                 val cost = cp.getForgetCost(branch)
                 ConfirmManager.requestConfirm(player, "遗忘分支「${branch.displayName}」(花费${cost}技能点)") {
-                    CareerManager.forgetBranch(player, branch)
-                    player.closeInventory()
-                    open(player)
+                    CareerManager.forgetBranch(player, branch); refresh(player)
                 }
-                return true
             }
             // Shortcut bind
-            slot == 37 -> { player.closeInventory(); BindGUI.open(player); return true }
-            // Resonate type toggle
-            slot == 38 -> { player.sendMessage("§7共鸣模式切换请在分支详情中操作"); return true }
-            // Resonate info
-            slot == 39 -> { player.sendMessage("§7共鸣信息：正在刷新..."); return true }
+            slot == 37 -> { player.closeInventory(); BindGUI.open(player) }
+            // Scroll
+            slot == 40 -> giveScroll(player)
         }
         return true
     }
 
-    // ===== Icon Builders =====
+    private fun getBranchForSlot(viewClass: CareerClass?, slot: Int, slots: List<Int>): Branch? {
+        viewClass ?: return null
+        val idx = slots.indexOf(slot)
+        return Branch.fromCareerClass(viewClass).getOrNull(idx)
+    }
 
-    private fun careerClassIcon(clazz: CareerClass, selected: Boolean, cp: CareerPlayer): ItemStack {
-        val item = ItemStack(if (selected) Material.LIME_STAINED_GLASS_PANE else clazz.material)
+    private fun refresh(player: Player) { player.closeInventory(); open(player) }
+
+    // ===== Icons =====
+
+    private fun classIcon(clazz: CareerClass, selected: Boolean, cp: CareerPlayer, isViewing: Boolean): ItemStack {
+        val item = ItemStack(if (isViewing) Material.LIME_STAINED_GLASS_PANE else if (selected) clazz.material else clazz.material)
         item.editMeta {
             it.displayName(Component.text(clazz.displayName, if (selected) NamedTextColor.GREEN else NamedTextColor.WHITE))
             val desc = mutableListOf<Component>()
-            if (selected) desc.add(Component.text("已选择", NamedTextColor.GREEN))
+            if (isViewing) {
+                desc.add(Component.text("✦ 当前查看", NamedTextColor.GOLD))
+                desc.add(Component.text("右击打开分支详情", NamedTextColor.GRAY))
+            } else if (selected) {
+                desc.add(Component.text("已选择 · 点击查看分支", NamedTextColor.GREEN))
+            } else if (!cp.isCareerSelected) {
+                desc.add(Component.text("点击选择此职业", NamedTextColor.YELLOW))
+            }
             desc.addAll(IconFactory.wrapLore(clazz.description, NamedTextColor.GRAY))
             desc.add(Component.text(""))
-            desc.add(Component.text("下设分支：${Branch.fromCareerClass(clazz).joinToString("、") { it.displayName }}", NamedTextColor.DARK_GREEN))
-            if (selected) desc.add(Component.text("点击查看详情", NamedTextColor.GRAY, TextDecoration.ITALIC))
-            else if (!cp.isCareerSelected) desc.add(Component.text("点击选择此职业", NamedTextColor.GOLD))
+            desc.add(Component.text("下设：${Branch.fromCareerClass(clazz).joinToString("、") { it.displayName }}", NamedTextColor.DARK_GREEN))
             it.lore(desc)
         }
         return item
     }
 
-    private fun branchButton(branch: Branch, cp: CareerPlayer): ItemStack {
+    private fun branchIcon(branch: Branch, cp: CareerPlayer): ItemStack {
         val has = CareerManager.hasBranch(cp, branch)
         val level = cp.getBranchLevel(branch)
         val item = ItemStack(if (has) branch.careerClass.material else Material.GRAY_DYE)
         item.editMeta {
             it.displayName(Component.text(branch.displayName, if (has) NamedTextColor.GREEN else NamedTextColor.RED))
-            val desc = mutableListOf<Component>()
-            desc.add(Component.text("状态：${if (has) "已解锁 Lv.$level" else "未解锁"}", if (has) NamedTextColor.GREEN else NamedTextColor.RED))
-            desc.add(Component.text(""))
-            desc.add(Component.text("基础能力：", NamedTextColor.GOLD))
+            val desc = mutableListOf<Component>(
+                Component.text("状态：${if (has) "已解锁 Lv.$level" else "未解锁"}", if (has) NamedTextColor.GREEN else NamedTextColor.RED),
+                Component.text(""),
+                Component.text("基础能力：", NamedTextColor.GOLD)
+            )
             desc.addAll(IconFactory.wrapLore(branch.baseEffect, NamedTextColor.GRAY))
             desc.add(Component.text(""))
-            if (has) desc.add(Component.text("左击查看技能/顿悟详情", NamedTextColor.GRAY, TextDecoration.ITALIC))
-            else desc.add(Component.text("点击解锁（消耗1技能点）", NamedTextColor.GREEN))
+            if (has) desc.add(Component.text("点击查看技能/顿悟", NamedTextColor.GRAY, TextDecoration.ITALIC))
+            else desc.add(Component.text("点击解锁（1技能点）", NamedTextColor.YELLOW))
             it.lore(desc)
         }
         return item
     }
 
-    private fun resonateButton(branch: Branch, mode: com.waterful.project.career.model.ResonanceMode): ItemStack {
-        val item = ItemStack(Material.BELL)
+    private fun resonateIcon(branch: Branch, cp: CareerPlayer): ItemStack {
+        val isResonant = cp.resonantBranch == branch
+        val has = CareerManager.hasBranch(cp, branch)
+        val item = ItemStack(when { isResonant -> Material.BELL; has -> Material.GOLD_NUGGET; else -> Material.GRAY_DYE })
         item.editMeta {
-            it.displayName(Component.text("共鸣：${branch.displayName}", NamedTextColor.YELLOW))
+            it.displayName(Component.text("共鸣：${branch.displayName}", if (isResonant) NamedTextColor.GOLD else NamedTextColor.GRAY))
             it.lore(listOf(
-                Component.text("当前模式：${mode.displayName}", NamedTextColor.GOLD),
-                Component.text(mode.description, NamedTextColor.GRAY),
-                Component.text(""),
-                Component.text("点击切换共鸣模式", NamedTextColor.GRAY, TextDecoration.ITALIC)
+                if (isResonant) Component.text("✦ 当前共鸣分支", NamedTextColor.GREEN)
+                else if (has) Component.text("点击设为共鸣分支", NamedTextColor.YELLOW)
+                else Component.text("未解锁", NamedTextColor.RED),
+                Component.text("", NamedTextColor.WHITE),
+                Component.text("最多共鸣1个分支", NamedTextColor.DARK_GRAY)
             ))
         }
         return item
     }
 
-    private fun forgetButton(branch: Branch, cp: CareerPlayer, has: Boolean): ItemStack {
-        val item = ItemStack(if (has) Material.LAVA_BUCKET else Material.BARRIER)
+    private fun forgetIcon(branch: Branch, cp: CareerPlayer): ItemStack {
+        val has = CareerManager.hasBranch(cp, branch)
         val cost = if (has) cp.getForgetCost(branch) else 0
+        val item = ItemStack(if (has) Material.LAVA_BUCKET else Material.BARRIER)
         item.editMeta {
             it.displayName(Component.text("遗忘：${branch.displayName}", NamedTextColor.GOLD))
-            if (has) {
-                it.lore(listOf(
-                    Component.text("点击永久遗忘此分支", NamedTextColor.RED),
-                    Component.text("消耗：$cost 技能点", NamedTextColor.GRAY),
-                    Component.text("注意：此操作不可逆！", NamedTextColor.DARK_RED)
-                ))
-            } else {
-                it.lore(listOf(Component.text("未解锁，无法遗忘", NamedTextColor.DARK_GRAY)))
-            }
+            it.lore(if (has) listOf(
+                Component.text("点击遗忘（消耗${cost}技能点）", NamedTextColor.RED),
+                Component.text("此操作不可逆！", NamedTextColor.DARK_RED)
+            ) else listOf(Component.text("未解锁", NamedTextColor.DARK_GRAY)))
         }
         return item
     }
 
-    private fun shortcutBindButton(cp: CareerPlayer): ItemStack {
+    private fun shortcutIcon(cp: CareerPlayer): ItemStack {
         val item = ItemStack(Material.PLAYER_HEAD)
         item.editMeta {
             it.displayName(Component.text("快捷释放", NamedTextColor.AQUA))
-            it.lore(listOf(
-                Component.text("将技能/顿悟绑定到键盘", NamedTextColor.GRAY),
-                Component.text("通过职业信物释放它们", NamedTextColor.GRAY),
-                Component.text(""),
-                Component.text("点击打开绑定菜单", NamedTextColor.GRAY, TextDecoration.ITALIC)
-            ))
+            it.lore(listOf(Component.text("点击打开绑定面板", NamedTextColor.GRAY)))
         }
         return item
     }
 
-    private fun resonateTypeButton(cp: CareerPlayer): ItemStack {
+    private fun resonateTypeIcon(cp: CareerPlayer): ItemStack {
         val item = ItemStack(Material.PLAYER_HEAD)
         item.editMeta {
             it.displayName(Component.text("共鸣模式", NamedTextColor.YELLOW))
+            val branch = cp.resonantBranch
+            it.lore(listOf(Component.text("当前：${if (branch != null) cp.getResonanceMode(branch).displayName else "无"}", NamedTextColor.GOLD)))
+        }
+        return item
+    }
+
+    private fun resonateInfoIcon(cp: CareerPlayer): ItemStack {
+        val branch = cp.resonantBranch
+        val item = ItemStack(Material.PLAYER_HEAD)
+        item.editMeta {
+            it.displayName(Component.text("共鸣信息", NamedTextColor.YELLOW))
+            if (branch != null) {
+                val lv = cp.getResonanceLevel(branch)
+                val range = cp.getResonanceRange(branch)
+                val mode = cp.getResonanceMode(branch)
+                it.lore(listOf(
+                    Component.text("分支：${branch.displayName}", NamedTextColor.GRAY),
+                    Component.text("等级：Lv.$lv  范围：${String.format("%.0f", range)}格", NamedTextColor.GRAY),
+                    Component.text("模式：${mode.displayName}", NamedTextColor.GOLD)
+                ))
+            } else {
+                it.lore(listOf(Component.text("未选择共鸣分支", NamedTextColor.DARK_GRAY)))
+            }
+        }
+        return item
+    }
+
+    private fun scrollIcon(player: Player): ItemStack {
+        val hasScroll = player.inventory.any {
+            it != null && run {
+                val p = Bukkit.getPluginManager().getPlugin("StarLightRe") as? org.bukkit.plugin.java.JavaPlugin
+                p != null && com.waterful.project.career.CareerItems.isScroll(p, it)
+            }
+        }
+        val item = ItemStack(Material.ENCHANTED_BOOK)
+        item.editMeta {
+            it.displayName(Component.text(if (hasScroll) "技能卷轴 ✓" else "领取技能卷轴", if (hasScroll) NamedTextColor.GREEN else NamedTextColor.GOLD))
             it.lore(listOf(
-                Component.text("点击切换共鸣模式", NamedTextColor.GRAY),
-                Component.text("模式列表：关闭/全局/友善/内部/独奏", NamedTextColor.GRAY)
+                if (hasScroll) Component.text("背包中已有", NamedTextColor.GRAY) else Component.text("点击领取", NamedTextColor.YELLOW)
             ))
         }
         return item
     }
 
-    private fun resonateInfoButton(cp: CareerPlayer): ItemStack {
-        val item = ItemStack(Material.PLAYER_HEAD)
-        val resonating = cp.resonanceModes.filter { it.value != com.waterful.project.career.model.ResonanceMode.DISABLED }
-        item.editMeta {
-            it.displayName(Component.text("共鸣信息", NamedTextColor.YELLOW))
-            val desc = mutableListOf<Component>()
-            resonating.forEach { (br, mode) ->
-                desc.add(Component.text("${br.displayName}: ${mode.displayName} Lv.${cp.getResonanceLevel(br)}", NamedTextColor.GRAY))
-            }
-            if (resonating.isEmpty()) desc.add(Component.text("当前无共鸣分支", NamedTextColor.DARK_GRAY))
-            it.lore(desc)
-        }
-        return item
+    private fun giveScroll(player: Player) {
+        val p = Bukkit.getPluginManager().getPlugin("StarLightRe") as? org.bukkit.plugin.java.JavaPlugin ?: return
+        player.inventory.addItem(com.waterful.project.career.CareerItems.createScroll(p))
+        player.sendMessage("§a✦ 技能卷轴已放入背包")
     }
 
     private fun fillFrame(inv: org.bukkit.inventory.Inventory) {
-        val filler = IconFactory.fillerPane()
-        for (i in 0 until 54) {
-            if (inv.getItem(i) == null || inv.getItem(i)?.type == Material.AIR) {
-                inv.setItem(i, filler)
-            }
-        }
+        val f = IconFactory.fillerPane()
+        for (i in 0 until 54) if (inv.getItem(i) == null || inv.getItem(i)?.type == Material.AIR) inv.setItem(i, f)
     }
 }

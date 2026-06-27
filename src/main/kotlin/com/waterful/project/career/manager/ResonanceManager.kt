@@ -33,29 +33,22 @@ object ResonanceManager {
 
         for (source in onlinePlayers) {
             val sourceCP = CareerManager.getPlayer(source) ?: continue
+            val branch = sourceCP.resonantBranch ?: continue
+            val mode = sourceCP.getResonanceMode(branch)
+            if (mode == ResonanceMode.DISABLED) continue
 
-            for (branch in sourceCP.unlockedBranches.keys) {
-                val mode = sourceCP.getResonanceMode(branch)
-                if (mode == ResonanceMode.DISABLED) continue
+            val passiveSkill = sourceCP.getSkill(branch, Branch.getPassiveSkillIndex())
+            val passiveLevel = passiveSkill?.currentLevel ?: 0
+            if (passiveLevel == 0 && mode != ResonanceMode.SOLO_ECHO) continue
 
-                val passiveSkill = sourceCP.getSkill(branch, Branch.getPassiveSkillIndex())
-                val passiveLevel = passiveSkill?.currentLevel ?: 0
-                if (passiveLevel == 0 && mode != ResonanceMode.SOLO_ECHO) continue
-
-                when (mode) {
-                    ResonanceMode.DISABLED -> {}
-                    ResonanceMode.SOLO_ECHO -> {
-                        // Self-only double effect
-                        applySelfResonance(source, branch, passiveLevel, doubleEffect = true)
-                    }
-                    else -> {
-                        val range = sourceCP.getResonanceRange(branch)
-                        if (range <= 0) continue
-
-                        val targets = getEffectivePlayers(source, sourceCP, branch, mode, range)
-                        for (target in targets) {
-                            applyResonanceToTarget(sourceCP, branch, target, passiveLevel)
-                        }
+            when (mode) {
+                ResonanceMode.SOLO_ECHO -> applySelfResonance(source, branch, passiveLevel, doubleEffect = true)
+                else -> {
+                    val range = sourceCP.getResonanceRange(branch)
+                    if (range <= 0) continue
+                    val targets = getEffectivePlayers(source, sourceCP, branch, mode, range)
+                    for (target in targets) {
+                        applyResonanceToTarget(sourceCP, branch, target, passiveLevel)
                     }
                 }
             }

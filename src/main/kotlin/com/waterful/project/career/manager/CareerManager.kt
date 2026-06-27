@@ -174,10 +174,11 @@ object CareerManager {
         cp.unlockedBranches.remove(branch)
         cp.chosenEurekas.remove(branch)
         cp.resonanceModes.remove(branch)
-        // Clean up auto-cast, cooldowns, and hotkey bindings for this branch
+        // Clean up auto-cast, cooldowns, hotkey bindings, and resonant branch
         cp.autoCastSkills.keys.removeAll { it.startsWith(branch.name) }
         cp.cooldowns.keys.removeAll { it.startsWith(branch.name) }
         clearHotkeyBindsForBranch(cp, branch)
+        if (cp.resonantBranch == branch) cp.resonantBranch = null
 
         player.sendMessage("§a✦ 已遗忘分支：${branch.displayName}（花费${cost}技能点）")
         return true

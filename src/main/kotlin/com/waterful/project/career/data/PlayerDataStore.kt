@@ -130,6 +130,12 @@ class PlayerDataStore(private val plugin: JavaPlugin) {
             cfg.set("hotkeys.$slot", binding)
         }
 
+        // Release mode
+        cfg.set("scroll-mode", player.scrollMode)
+
+        // Resonant branch
+        player.resonantBranch?.let { cfg.set("resonant-branch", it.name) }
+
         return cfg
     }
 
@@ -228,6 +234,14 @@ class PlayerDataStore(private val plugin: JavaPlugin) {
             val slot = key.toIntOrNull() ?: return@forEach
             val binding = cfg.getString("hotkeys.$key") ?: return@forEach
             player.hotkeyBinds[slot] = binding
+        }
+
+        // Load release mode
+        player.scrollMode = cfg.getBoolean("scroll-mode", false)
+
+        // Load resonant branch
+        cfg.getString("resonant-branch")?.let {
+            player.resonantBranch = Branch.fromName(it)
         }
 
         playerCache[uuid] = player

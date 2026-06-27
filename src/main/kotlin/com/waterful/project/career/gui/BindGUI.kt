@@ -59,8 +59,9 @@ object BindGUI {
             inv.setItem(slot, icon)
         }
 
-        // Info item
-        inv.setItem(22, infoItem())
+        // Info + Mode toggle
+        inv.setItem(23, infoItem(cp.scrollMode))
+        inv.setItem(25, modeToggleIcon(cp.scrollMode))
 
         // Close
         inv.setItem(26, closeButton())
@@ -71,6 +72,17 @@ object BindGUI {
 
     fun handleClick(player: Player, slot: Int, inv: org.bukkit.inventory.Inventory): Boolean {
         if (slot == 26) { player.closeInventory(); return true }
+
+        // Mode toggle
+        if (slot == 25) {
+            val cp = CareerManager.getPlayer(player) ?: return true
+            cp.scrollMode = !cp.scrollMode
+            player.sendMessage("§6⚡ 切换为：${if (cp.scrollMode) "卷轴模式" else "Shift模式"}")
+            player.closeInventory()
+            open(player)
+            return true
+        }
+
         val bindIndex = slot - 10
         if (bindIndex !in 0..8) return true
 
@@ -137,19 +149,54 @@ object BindGUI {
         return item
     }
 
-    private fun infoItem(): ItemStack {
+    private fun modeToggleIcon(scrollMode: Boolean): ItemStack {
+        val item = ItemStack(if (scrollMode) Material.ENCHANTED_BOOK else Material.LEVER)
+        item.editMeta {
+            it.displayName(Component.text("释放模式", NamedTextColor.GOLD))
+            it.lore(listOf(
+                Component.text("当前：${if (scrollMode) "§d卷轴模式" else "§eShift模式"}", NamedTextColor.GRAY),
+                Component.text("", NamedTextColor.WHITE),
+                if (scrollMode)
+                    Component.text("副手卷轴 + 切换槽位 + F = 释放", NamedTextColor.LIGHT_PURPLE)
+                else
+                    Component.text("下蹲 + 1~9 = 释放", NamedTextColor.YELLOW),
+                Component.text("", NamedTextColor.WHITE),
+                Component.text("点击切换模式", NamedTextColor.GOLD)
+            ))
+        }
+        return item
+    }
+
+    private fun infoItem(scrollMode: Boolean): ItemStack {
         val item = ItemStack(Material.KNOWLEDGE_BOOK)
         item.editMeta {
-            it.displayName(Component.text("使用说明", NamedTextColor.GOLD))
-            it.lore(listOf(
-                Component.text("下蹲 + 数字键 释放绑定技能", NamedTextColor.GRAY),
-                Component.text("", NamedTextColor.WHITE),
-                Component.text("Shift+1~3 默认: 生涯/绑定/重置", NamedTextColor.GRAY),
-                Component.text("Shift+4~9 自由绑定主动技能", NamedTextColor.GRAY),
-                Component.text("", NamedTextColor.WHITE),
-                Component.text("点击槽位循环切换绑定", NamedTextColor.GOLD),
-                Component.text("每个槽位可绑一个主动技能", NamedTextColor.GRAY)
+            it.displayName(Component.text("使用说明 · ${if (scrollMode) "卷轴模式" else "Shift模式"}", NamedTextColor.GOLD))
+            val desc = mutableListOf(
+                Component.text("当前模式：${if (scrollMode) "§d卷轴模式" else "§eShift模式"}", NamedTextColor.GRAY),
+                Component.text(""),
+            )
+            if (scrollMode) {
+                desc.addAll(listOf(
+                    Component.text("① 将技能卷轴放入副手", NamedTextColor.GRAY),
+                    Component.text("② 切换到目标数字槽位", NamedTextColor.GRAY),
+                    Component.text("③ 按 F 键释放技能", NamedTextColor.GRAY),
+                    Component.text("", NamedTextColor.WHITE),
+                    Component.text("Shift+F → 生涯面板", NamedTextColor.DARK_GRAY),
+                    Component.text("普通按键 → 正常切换物品栏", NamedTextColor.DARK_GRAY)
+                ))
+            } else {
+                desc.addAll(listOf(
+                    Component.text("下蹲 + 数字键 → 释放技能", NamedTextColor.GRAY),
+                    Component.text("", NamedTextColor.WHITE),
+                    Component.text("Shift+1 生涯 | Shift+2 绑定", NamedTextColor.DARK_GRAY),
+                    Component.text("Shift+3 重置 | Shift+4~9 自由", NamedTextColor.DARK_GRAY)
+                ))
+            }
+            desc.addAll(listOf(
+                Component.text(""),
+                Component.text("点击下方按钮切换模式", NamedTextColor.GOLD)
             ))
+            it.lore(desc)
         }
         return item
     }

@@ -9,6 +9,8 @@ data class CareerPlayer(
     val unlockedBranches: MutableMap<Branch, MutableList<SkillInstance>> = mutableMapOf(),
     val chosenEurekas: MutableMap<Branch, EurekaInstance> = mutableMapOf(),
     val resonanceModes: MutableMap<Branch, ResonanceMode> = mutableMapOf(),
+    /** Currently selected resonance branch (max 1) */
+    var resonantBranch: Branch? = null,
     var skillPoints: Int = 0,
     var onlineTimeSeconds: Long = 0L,
     val antiFarmData: AntiFarmData = AntiFarmData(),
@@ -17,7 +19,9 @@ data class CareerPlayer(
     // Auto-cast settings for active skills
     val autoCastSkills: MutableMap<String, Boolean> = mutableMapOf(),
     // Hotkey bindings: slotIndex(0-8) -> "branchName:skillIndex"
-    val hotkeyBinds: MutableMap<Int, String> = mutableMapOf()
+    val hotkeyBinds: MutableMap<Int, String> = mutableMapOf(),
+    /** Release mode: true = scroll+offhand+F, false = Shift+1~9 */
+    var scrollMode: Boolean = false
 ) {
     /** Get the level of a branch: sum of all skill levels + (1 if eureka chosen) */
     fun getBranchLevel(branch: Branch): Int {
