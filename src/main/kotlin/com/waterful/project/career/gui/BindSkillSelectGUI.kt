@@ -18,8 +18,10 @@ import org.bukkit.inventory.ItemStack
 object BindSkillSelectGUI {
 
     const val TITLE_PREFIX = "绑定技能："
+    private val targetSlots = mutableMapOf<java.util.UUID, Int>()
 
     fun open(player: Player, branch: Branch, targetSlot: Int) {
+        targetSlots[player.uniqueId] = targetSlot
         val cp = CareerManager.getPlayer(player) ?: return
         val inv = Bukkit.createInventory(null, 27, Component.text("$TITLE_PREFIX${branch.displayName}"))
         var slot = 10
@@ -62,8 +64,7 @@ object BindSkillSelectGUI {
             if (!skill.skillDef.bindable) continue
             if (10 + skillOffset == slot) {
                 // Bind this skill
-                val bindIndex = BindSkillSelectTarget.targetSlot
-                if (bindIndex < 0) { player.sendMessage("§c绑定槽位信息丢失"); return true }
+                val bindIndex = targetSlots[player.uniqueId] ?: return true
                 cp.hotkeyBinds[bindIndex] = "${branch.name}:$index"
                 player.sendMessage("§a✦ Shift+${bindIndex + 1} 绑定：${skill.skillDef.name}")
                 player.closeInventory()
@@ -76,8 +77,7 @@ object BindSkillSelectGUI {
         // ACTIVE eureka binding
         cp.chosenEurekas[branch]?.let { eureka ->
             if (eureka.eurekaDef.skillType == SkillType.ACTIVE && 10 + skillOffset == slot) {
-                val bindIndex = BindSkillSelectTarget.targetSlot
-                if (bindIndex < 0) { player.sendMessage("§c绑定槽位信息丢失"); return true }
+                val bindIndex = targetSlots[player.uniqueId] ?: return true
                 cp.hotkeyBinds[bindIndex] = "eureka:${branch.name}"
                 player.sendMessage("§a✦ Shift+${bindIndex + 1} 绑定：§d${eureka.eurekaDef.name}")
                 player.closeInventory()
@@ -138,7 +138,3 @@ object BindSkillSelectGUI {
     }
 }
 
-/** Holds the target slot index between GUI levels */
-object BindSkillSelectTarget {
-    var targetSlot: Int = -1
-}

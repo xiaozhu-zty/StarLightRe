@@ -3,6 +3,7 @@ package com.waterful.project.career.listener
 import com.waterful.project.career.*
 import com.waterful.project.career.manager.DebugManager
 import com.waterful.project.career.model.Branch
+import com.waterful.project.career.skill.SkillExecutor
 import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.entity.*
@@ -425,19 +426,28 @@ class PassiveSkillListener : Listener {
         event.damage = event.damage * (1.0 + bonus)
     }
 
-    // ===== WARRIOR_SOLDIER skill 0 (军事训练): damage bonus + low HP buff =====
+    // ===== WARRIOR_SOLDIER skill 0 (军事训练): vs-player damage bonus + base 10% =====
 
     @EventHandler
     fun onSoldierBonus(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
         val damager = event.damager as? Player ?: return
+        if (event.entity !is Player) return // Only vs players
         if (!damager.hasBranch(Branch.WARRIOR_SOLDIER)) return
+        // Base +10% always, skill adds +20/30/40%
+        val baseBonus = 0.10
         val lv = damager.skillLevel(Branch.WARRIOR_SOLDIER, 0)
-        if (lv < 1) return
-        val bonus = when (lv) { 1 -> 0.20; 2 -> 0.30; 3 -> 0.40; else -> 0.0 }
-        event.damage = event.damage * (1.0 + bonus)
-        // Low HP buff
-        if (damager.health < 10.0) {
-            damager.addPotionEffect(PotionEffect(PotionEffectType.STRENGTH, 3 * 20, 0, false, true))
+        val skillBonus = when (lv) { 1 -> 0.20; 2 -> 0.30; 3 -> 0.40; else -> 0.0 }
+        event.damage = event.damage * (1.0 + baseBonus + skillBonus)
+    }
+
+    // ===== WARRIOR_SOLDIER base: low HP resistance =====
+
+    @EventHandler
+    fun onSoldierLowHp(event: org.bukkit.event.entity.EntityDamageEvent) {
+        val p = event.entity as? Player ?: return
+        if (!p.hasBranch(Branch.WARRIOR_SOLDIER)) return
+        if (p.health <= 10.0) {
+            p.addPotionEffect(PotionEffect(PotionEffectType.RESISTANCE, 5 * 20, 0, false, true))
         }
     }
 
@@ -548,6 +558,147 @@ class PassiveSkillListener : Listener {
         p.giveExp(exp)
         cp.setCooldown("worker_toolmaker_skill_1", now)
         DebugManager.logState(p, "熟能生巧 — 获得${exp}经验等级")
+    }
+
+    // ===== WARRIOR WEAPON base: 弩25%不消耗普通箭 =====
+    @EventHandler
+    fun onBowShoot(event: org.bukkit.event.entity.EntityShootBowEvent) {
+        val p = event.entity as? Player ?: return
+        // 手摇TNT火炮: 箭变为TNT
+        com.waterful.project.career.skill.EurekaEffectHandler.onBowShoot(p, event)
+        if (event.isCancelled) return
+        // 信号弹: 光灵箭不消耗 + 发光延长
+        val ammo = event.arrowItem ?: return
+        val projectile = event.projectile
+        if (projectile is org.bukkit.entity.AbstractArrow) {
+            SkillExecutor.onSignalFlareShoot(p, projectile, ammo)
+        }
+        // 武器专家: 弩箭返还
+        if (event.bow?.type == Material.CROSSBOW && p.hasBranch(Branch.WARRIOR_WEAPON)) {
+            if (ammo.type == Material.ARROW && p.roll(25, "武器专家 — 弩箭不消耗")) {
+                p.inventory.addItem(ItemStack(ammo.type, 1))
+            }
+        }
+    }
+
+    // ===== 信号弹: 延长发光效果 =====
+    @EventHandler
+    fun onSignalFlareHit(event: org.bukkit.event.entity.ProjectileHitEvent) {
+        SkillExecutor.onSignalFlareHit(event)
+    }
+
+    // ===== WARRIOR WEAPON eureka 0 (涌潮长戟): 三叉戟近战回血 =====
+    @EventHandler
+    fun onTridentMelee(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
+        val p = event.damager as? Player ?: return
+        if (p.inventory.itemInMainHand.type != Material.TRIDENT) return
+        if (!p.hasBranch(Branch.WARRIOR_WEAPON)) return
+        val has = p.career()?.chosenEurekas?.get(Branch.WARRIOR_WEAPON)?.eurekaDef?.id?.contains("weapon_eureka_0") == true
+        if (!has) return
+        p.health = (p.health + 2.0).coerceAtMost(p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0)
+    }
+
+    // ===== WARRIOR WEAPON eureka 1 (穿甲箭头): 弩箭+1真伤 + 每级穿透+1 =====
+    @EventHandler
+    fun onPiercingArrow(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
+        if (event.cause != org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE) return
+        val arrow = event.damager as? org.bukkit.entity.AbstractArrow ?: return
+        val p = arrow.shooter as? Player ?: return
+        if (!p.hasBranch(Branch.WARRIOR_WEAPON)) return
+        val has = p.career()?.chosenEurekas?.get(Branch.WARRIOR_WEAPON)?.eurekaDef?.id?.contains("weapon_eureka_1") == true
+        if (!has) return
+        // Only crossbow arrows
+        if (p.inventory.itemInMainHand.type != Material.CROSSBOW && p.inventory.itemInOffHand.type != Material.CROSSBOW) return
+        val piercing = p.inventory.itemInMainHand.enchantments[org.bukkit.enchantments.Enchantment.PIERCING] ?: 0
+        val bonusDamage = (1 + piercing).toDouble()
+        val target = event.entity as? org.bukkit.entity.LivingEntity ?: return
+        // Apply true damage as extra on the event (added after armor calc by MC)
+        event.damage += bonusDamage
+    }
+
+    // ===== WARRIOR SOLDIER base: 全套盔甲受伤-2 =====
+    @EventHandler
+    fun onSoldierArmor(event: org.bukkit.event.entity.EntityDamageEvent) {
+        val p = event.entity as? Player ?: return
+        if (!p.hasBranch(Branch.WARRIOR_SOLDIER)) return
+        if (p.inventory.armorContents.any { it == null || it.type == Material.AIR }) return
+        event.damage = (event.damage - 2.0).coerceAtLeast(0.0)
+    }
+
+    // ===== WARRIOR SOLDIER eureka 0 (游击战): 受玩家攻击后清除发光+速度II =====
+    @EventHandler
+    fun onSoldierRetreat(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
+        val victim = event.entity as? Player ?: return
+        if (event.damager !is Player) return
+        if (!victim.hasBranch(Branch.WARRIOR_SOLDIER)) return
+        val has = victim.career()?.chosenEurekas?.get(Branch.WARRIOR_SOLDIER)?.eurekaDef?.id?.contains("soldier_eureka_0") == true
+        if (!has) return
+        victim.removePotionEffect(PotionEffectType.GLOWING)
+        victim.addPotionEffect(PotionEffect(PotionEffectType.SPEED, 3 * 20, 1))
+    }
+
+    // ===== WARRIOR EXPLORER: base lvl.0 始终迅捷I + eureka_1 迅捷II + eureka_2 旷野互助 =====
+    @EventHandler
+    fun onExplorerJoin(event: org.bukkit.event.player.PlayerJoinEvent) { applyExplorerEffects(event.player) }
+    @EventHandler
+    fun onExplorerRespawn(event: org.bukkit.event.player.PlayerRespawnEvent) { applyExplorerEffects(event.player) }
+
+    private fun applyExplorerEffects(p: Player) {
+        if (!p.hasBranch(Branch.WARRIOR_EXPLORER)) return
+        val cp = p.career() ?: return
+        val hasEureka1 = cp.chosenEurekas[Branch.WARRIOR_EXPLORER]?.eurekaDef?.id?.contains("explorer_eureka_1") == true
+        val spdLvl = if (hasEureka1) 1 else 0 // Speed I (base) or Speed II (eureka)
+        p.addPotionEffect(PotionEffect(PotionEffectType.SPEED, 72000 * 20, spdLvl, false, false, true))
+    }
+
+    // ===== TNT Cannon: prevent block damage from eureka-spawned TNT =====
+    @EventHandler
+    fun onTntExplode(event: org.bukkit.event.entity.EntityExplodeEvent) {
+        if (com.waterful.project.career.skill.EurekaEffectHandler.isNoGriefTnt(event.entity)) {
+            event.blockList().clear()
+        }
+    }
+
+    // ===== WARRIOR EXPLORER eureka 2 (旷野互助): 平原群系给周围生物再生II =====
+    @EventHandler
+    fun onExplorerPlainsAura(event: org.bukkit.event.player.PlayerMoveEvent) {
+        val p = event.player
+        if (!p.hasBranch(Branch.WARRIOR_EXPLORER)) return
+        val has = p.career()?.chosenEurekas?.get(Branch.WARRIOR_EXPLORER)?.eurekaDef?.id?.contains("explorer_eureka_2") == true
+        if (!has) return
+        if (event.from.blockX == event.to?.blockX && event.from.blockZ == event.to?.blockZ) return
+        if (!p.location.block.biome.toString().contains("PLAINS")) return
+        for (entity in p.location.getNearbyEntities(6.0, 6.0, 6.0)) {
+            if (entity is org.bukkit.entity.LivingEntity && entity != p) {
+                entity.addPotionEffect(PotionEffect(PotionEffectType.REGENERATION, 5 * 20, 1, false, false))
+            }
+        }
+    }
+
+    // FARMER_FISHERMAN base effects: handled by StarLightRe.startFishermanTick (20tick repeating task)
+
+    // ===== FARMER_FISHERMAN eureka 2 (凝望反制): guardian damage reduction =====
+    @EventHandler
+    fun onGuardianDamage(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
+        val p = event.entity as? Player ?: return
+        if (!p.hasBranch(Branch.FARMER_FISHERMAN)) return
+        val has = p.career()?.chosenEurekas?.get(Branch.FARMER_FISHERMAN)?.eurekaDef?.id?.contains("fisherman_eureka_2") == true
+        if (!has) return
+        if (event.damager is org.bukkit.entity.Guardian || event.damager is org.bukkit.entity.ElderGuardian) {
+            event.damage = maxOf(event.damage - 6.0, 0.1)
+        }
+    }
+
+    // ===== FARMER_MERCHANT base: 村庄中生命恢复I =====
+    @EventHandler
+    fun onMerchantMove(event: org.bukkit.event.player.PlayerMoveEvent) {
+        val p = event.player
+        if (!p.hasBranch(Branch.FARMER_MERCHANT)) return
+        if (event.from.blockX == event.to?.blockX && event.from.blockZ == event.to?.blockZ) return
+        val inVillage = p.location.getNearbyEntities(32.0, 32.0, 32.0).any { it is org.bukkit.entity.Villager }
+        if (inVillage) {
+            p.addPotionEffect(PotionEffect(PotionEffectType.REGENERATION, 5 * 20, 0, false, false))
+        }
     }
 
     // ===== ARCHITECT_STRUCTURE skill 0 (高效回收): flint&steel always works, explosion reduction =====

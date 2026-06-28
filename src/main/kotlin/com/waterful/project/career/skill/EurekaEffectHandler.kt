@@ -15,45 +15,28 @@ import org.bukkit.inventory.ItemStack
  */
 object EurekaEffectHandler {
 
-    private val eurekaEffects: Map<String, (Player) -> Unit> = mapOf(
-        // Scholar Enchanter eureka 1: 附魔领域展开 → open lv30 enchanting table
-        "scholar_enchanter_eureka_1" to ::openEnchantingTable,
-        // Architect Fortress eureka 2: 便携式切石机 → open stonecutter
-        "architect_fortress_eureka_2" to ::openStonecutter,
-        // Architect Traffic eureka 2: 游弋信风 → dolphin's grace
-        "architect_traffic_eureka_2" to ::applyDolphinGrace,
-        // Architect Demolition eureka 2: 手摇TNT火炮 → TNT arrows
-        "architect_demolition_eureka_2" to ::applyTntArrows,
-        // Farmer Fisherman eureka 0: 骇浪征服者 → resistance in ocean
-        "farmer_fisherman_eureka_0" to ::applyOceanResistance,
-        // Farmer Fisherman eureka 1: 授人以渔 → fishing exp
-        "farmer_fisherman_eureka_1" to ::applyFishingExp,
-        // Warrior Weapon eureka 0: 涌潮长戟 → trident bonus
-        "warrior_weapon_eureka_0" to ::applyTridentMastery,
-        // Warrior Weapon eureka 1: 穿甲箭头 → crossbow true damage
-        "warrior_weapon_eureka_1" to ::applyPiercingArrow,
-        // Scholar Teacher eureka 0: 诲人不倦 → 20 exp near lectern
-        "scholar_teacher_eureka_0" to ::applyTeacherExp,
-        // Farmer Fisherman eureka 2: 凝望反制 → clear mining fatigue, guardian defense
-        "farmer_fisherman_eureka_2" to ::applyGuardianDefense,
-        // Worker Lumberjack eureka 0: 巨树攀登者 → scaffolding
-        "worker_lumberjack_eureka_0" to ::giveScaffolding,
-        // Worker Lumberjack eureka 1: 护林员 → extinguish fires
-        "worker_lumberjack_eureka_1" to ::extinguishFires,
-        // Worker Miner eureka 0: 自然矿洞勘探 → cave buff
-        "worker_miner_eureka_0" to ::applyCaveBuff,
-        // Worker Miner eureka 1: 黑暗适应 → darkness tolerance
-        "worker_miner_eureka_1" to ::applyDarkAdapt,
-        // Worker Miner eureka 2: 地质学 → locate ores
-        "worker_miner_eureka_2" to ::locateOres,
-        "scholar_redstone_eureka_1" to ::targetedPulse,
-        "scholar_redstone_eureka_0" to ::redstoneTorchConvert
-    )
-
     fun execute(eurekaId: String, player: Player): Boolean {
-        val handler = eurekaEffects[eurekaId] ?: return false
         return try {
-            handler(player)
+            when (eurekaId) {
+                "scholar_enchanter_eureka_1" -> openEnchantingTable(player)
+                "architect_fortress_eureka_2" -> openStonecutter(player)
+                "architect_traffic_eureka_2" -> applyDolphinGrace(player)
+                "architect_demolition_eureka_2" -> applyTntArrows(player)
+                "farmer_fisherman_eureka_0" -> applyOceanResistance(player)
+                "farmer_fisherman_eureka_1" -> applyFishingExp(player)
+                "warrior_weapon_eureka_0" -> applyTridentMastery(player)
+                "warrior_weapon_eureka_1" -> applyPiercingArrow(player)
+                "scholar_teacher_eureka_0" -> applyTeacherExp(player)
+                "farmer_fisherman_eureka_2" -> applyGuardianDefense(player)
+                "worker_lumberjack_eureka_0" -> giveScaffolding(player)
+                "worker_lumberjack_eureka_1" -> extinguishFires(player)
+                "worker_miner_eureka_0" -> applyCaveBuff(player)
+                "worker_miner_eureka_1" -> applyDarkAdapt(player)
+                "worker_miner_eureka_2" -> locateOres(player)
+                "scholar_redstone_eureka_1" -> targetedPulse(player)
+                "scholar_redstone_eureka_0" -> redstoneTorchConvert(player)
+                else -> return false
+            }
             true
         } catch (e: Exception) {
             player.sendMessage(Component.text("顿悟执行出错: ${e.message}", NamedTextColor.RED))
@@ -121,9 +104,31 @@ object EurekaEffectHandler {
         player.sendMessage(Component.text("§5✦ 游弋信风：海豚的恩惠 ${if(isOcean)"III" else "II"}，持续${duration}秒"))
     }
 
+    // TNT arrow active players: UUID -> expiry timestamp
+    private val tntArrowPlayers = mutableMapOf<java.util.UUID, Long>()
+    // Track spawned TNT entities that should not destroy blocks
+    private val noGriefTnt = mutableSetOf<java.util.UUID>()
+
     private fun applyTntArrows(player: Player) {
-        player.sendMessage(Component.text("§5✦ 手摇TNT火炮：30秒内弓箭将变为TNT"))
-        player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.STRENGTH, 30 * 20, 0, false, true))
+        tntArrowPlayers[player.uniqueId] = System.currentTimeMillis() + 30_000L
+        player.sendMessage(Component.text("§5✦ 手摇TNT火炮：30秒内弓箭将变为已点燃TNT（不破坏方块）"))
+    }
+
+    fun onBowShoot(player: Player, event: org.bukkit.event.entity.EntityShootBowEvent) {
+        val expiry = tntArrowPlayers[player.uniqueId] ?: return
+        if (System.currentTimeMillis() > expiry) { tntArrowPlayers.remove(player.uniqueId); return }
+        event.isCancelled = true
+        val arrow = event.projectile
+        val tnt = player.world.spawn(arrow.location, org.bukkit.entity.TNTPrimed::class.java)
+        tnt.velocity = arrow.velocity
+        tnt.fuseTicks = 60
+        noGriefTnt.add(tnt.uniqueId)
+    }
+
+    /** Call from EntityExplodeEvent listener — cancels block damage for our TNT */
+    fun isNoGriefTnt(entity: org.bukkit.entity.Entity): Boolean {
+        noGriefTnt.remove(entity.uniqueId) // Clean up after check
+        return true // Already tracked = our TNT
     }
 
     private fun applyOceanResistance(player: Player) {

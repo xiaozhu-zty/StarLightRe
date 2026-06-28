@@ -1004,9 +1004,9 @@ careers:
             name: "掩体机动"
             type: ACTIVE
             icon: "IRON_BLOCK"
-            cooldown: [60, 60, 60]
+            cooldown: [30, 30, 30]
             levels:
-              - "获得10秒的抗性提升I效果；若生命值不高于20，则变为10秒抗性提升II效果"
+              - "获得10秒的抗性提升I效果；若生命值不高于15，则变为10秒抗性提升II效果"
               - "获得12秒的抗性提升I效果；若生命值不高于20，则变为12秒抗性提升III效果"
               - "获得15秒的抗性提升II效果；若生命值不高于15，则变为15秒抗性提升III效果"
           - id: "warrior_soldier_skill_2"
@@ -1102,7 +1102,7 @@ careers:
               - "若生命值不为满：恢复16生命值；若饥饿值不为满：获得1个南瓜派；若两者均为满：获得75秒迅捷III"
           - id: "warrior_explorer_skill_2"
             name: "前进营地"
-            type: ACTIVE
+            type: PASSIVE
             icon: "CAMPFIRE"
             cooldown: [300, 300, 300]
             levels:

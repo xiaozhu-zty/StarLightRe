@@ -86,61 +86,53 @@ object SkillExecutor {
 
     // ===== Built-in active skill effects =====
 
-    // All builtin active skill effects — add new implementations here
-    private val builtinEffects: Map<String, (Player, SkillInstance, Int) -> Boolean> = mapOf(
-        // Architect
-        "architect_demolition_skill_1" to ::executeQiLangXingZhe,
-        "architect_demolition_skill_2" to ::executeQianYanBaoPo,
-        "architect_structure_skill_2" to ::executeLingKongChuangXiang,
-        "architect_traffic_skill_1" to ::executeZhuiJiaDongLi,
-        "architect_traffic_skill_2" to ::executeBeiYongZaiJu,
-        "architect_fortress_skill_1" to ::executeBiHuXunQiu,
-        "architect_fortress_skill_2" to ::executeTieBiLiChang,
-        // Chef
-        "chef_butcher_skill_2" to ::executeKunShouTianDi,
-        "chef_baker_skill_2" to ::executeTianDianPaiDui,
-        "chef_brewer_skill_1" to ::executeZhengFaKongJian,
-        "chef_brewer_skill_2" to ::executeShenShangXianSu,
-        "chef_master_skill_1" to ::executeQiWeiYiZhen,
-        "chef_master_skill_2" to ::executeDuJinMeiZhuan,
-        "chef_baker_skill_1" to ::executeWenHuoManDun,
-        "chef_butcher_skill_1" to ::executeKaoRouZhuanJia,
-        // Scholar
-        "scholar_enchanter_skill_2" to ::executeZhuShuGongCheng,
-        "scholar_admin_skill_0" to ::executeRenLiZiYuan,
-        "scholar_teacher_skill_2" to ::executeXueShuShaLong,
-        "scholar_admin_skill_1" to ::executeXingZhengYouHua,
-        "scholar_admin_skill_2" to ::executeZongHeBaoGao,
-        "scholar_redstone_skill_2" to ::executeChaoZai,
-        // Farmer
-        "farmer_fisherman_skill_2" to ::executeDaYangJuanGu,
-        "farmer_fisherman_skill_1" to ::executeShouHuoTaoSheng,
-        "farmer_merchant_skill_2" to ::executeTePinBaoBiao,
-        "farmer_rancher_skill_2" to ::executeMuYuanHuanGe,
-        "farmer_rancher_skill_1" to ::executeSiLiaoTiaoPei,
-        "farmer_merchant_skill_1" to ::executePoCaiXiaoZai,
-        "farmer_botanist_skill_2" to ::executeZhiWuYiChuanXue,
-        "farmer_botanist_skill_1" to ::executeKeXueShiFei,
-        // Worker
-        "worker_miner_skill_2" to ::executeBuMieKuangDeng,
-        "worker_lumberjack_skill_2" to ::executeZhanJinZhiGu,
-        "worker_smelter_skill_2" to ::executeRanLiaoGuanDao,
-        "worker_lumberjack_skill_1" to ::executeQiaoLiYongFu,
-        "worker_miner_skill_1" to ::executeQiangLiYunGao,
-        "worker_smelter_skill_1" to ::executeRongJinMuJu,
-        // Warrior
-        "warrior_soldier_skill_1" to ::executeYanTiJiDong,
-        "warrior_weapon_skill_2" to ::executeQiBingTuXi,
-        "warrior_soldier_skill_2" to ::executeJueZhanChongFeng,
-        "warrior_hunter_skill_1" to ::executeYuXueQiangGong,
-        "warrior_explorer_skill_1" to ::executeTanSuoZheXingNang,
-        "warrior_weapon_skill_1" to ::executeXinHaoDan,
-        "warrior_hunter_skill_2" to ::executeWoJiEMengYan,
-        "warrior_explorer_skill_2" to ::executeQianJinYingDi,
-    )
-
     private fun executeBuiltinEffect(player: Player, skill: SkillInstance, level: Int): Boolean {
-        return builtinEffects[skill.skillDef.effectId]?.invoke(player, skill, level) ?: false
+        return when (skill.skillDef.effectId) {
+            "architect_demolition_skill_1" -> executeQiLangXingZhe(player, skill, level)
+            "architect_demolition_skill_2" -> executeQianYanBaoPo(player, skill, level)
+            "architect_structure_skill_2" -> executeLingKongChuangXiang(player, skill, level)
+            "architect_traffic_skill_1" -> executeZhuiJiaDongLi(player, skill, level)
+            "architect_traffic_skill_2" -> executeBeiYongZaiJu(player, skill, level)
+            "architect_fortress_skill_1" -> executeBiHuXunQiu(player, skill, level)
+            "architect_fortress_skill_2" -> executeTieBiLiChang(player, skill, level)
+            "chef_butcher_skill_2" -> executeKunShouTianDi(player, skill, level)
+            "chef_baker_skill_2" -> executeTianDianPaiDui(player, skill, level)
+            "chef_brewer_skill_1" -> executeZhengFaKongJian(player, skill, level)
+            "chef_brewer_skill_2" -> executeShenShangXianSu(player, skill, level)
+            "chef_master_skill_1" -> executeQiWeiYiZhen(player, skill, level)
+            "chef_master_skill_2" -> executeDuJinMeiZhuan(player, skill, level)
+            "chef_baker_skill_1" -> executeWenHuoManDun(player, skill, level)
+            "chef_butcher_skill_1" -> executeKaoRouZhuanJia(player, skill, level)
+            "scholar_enchanter_skill_2" -> executeZhuShuGongCheng(player, skill, level)
+            "scholar_admin_skill_0" -> executeRenLiZiYuan(player, skill, level)
+            "scholar_teacher_skill_2" -> executeXueShuShaLong(player, skill, level)
+            "scholar_admin_skill_1" -> executeXingZhengYouHua(player, skill, level)
+            "scholar_admin_skill_2" -> executeZongHeBaoGao(player, skill, level)
+            "scholar_redstone_skill_2" -> executeChaoZai(player, skill, level)
+            "farmer_fisherman_skill_2" -> executeDaYangJuanGu(player, skill, level)
+            "farmer_fisherman_skill_1" -> executeShouHuoTaoSheng(player, skill, level)
+            "farmer_merchant_skill_2" -> executeTePinBaoBiao(player, skill, level)
+            "farmer_rancher_skill_2" -> executeMuYuanHuanGe(player, skill, level)
+            "farmer_rancher_skill_1" -> executeSiLiaoTiaoPei(player, skill, level)
+            "farmer_merchant_skill_1" -> executePoCaiXiaoZai(player, skill, level)
+            "farmer_botanist_skill_2" -> executeZhiWuYiChuanXue(player, skill, level)
+            "farmer_botanist_skill_1" -> executeKeXueShiFei(player, skill, level)
+            "worker_miner_skill_2" -> executeBuMieKuangDeng(player, skill, level)
+            "worker_lumberjack_skill_2" -> executeZhanJinZhiGu(player, skill, level)
+            "worker_smelter_skill_2" -> executeRanLiaoGuanDao(player, skill, level)
+            "worker_lumberjack_skill_1" -> executeQiaoLiYongFu(player, skill, level)
+            "worker_miner_skill_1" -> executeQiangLiYunGao(player, skill, level)
+            "worker_smelter_skill_1" -> executeRongJinMuJu(player, skill, level)
+            "warrior_soldier_skill_1" -> executeYanTiJiDong(player, skill, level)
+            "warrior_weapon_skill_2" -> executeQiBingTuXi(player, skill, level)
+            "warrior_soldier_skill_2" -> executeJueZhanChongFeng(player, skill, level)
+            "warrior_hunter_skill_1" -> executeYuXueQiangGong(player, skill, level)
+            "warrior_explorer_skill_1" -> executeTanSuoZheXingNang(player, skill, level)
+            "warrior_weapon_skill_1" -> executeXinHaoDan(player, skill, level)
+            "warrior_hunter_skill_2" -> executeWoJiEMengYan(player, skill, level)
+            "warrior_explorer_skill_2" -> executeQianJinYingDi(player, skill, level)
+            else -> false
+        }
     }
 
     /** 咒术工程: 随机提升手持物品的一个魔咒等级 */
@@ -364,10 +356,43 @@ object SkillExecutor {
         return true
     }
 
-    /** 信号弹: 光灵箭不消耗+发光延长 */
+    /** 信号弹: 下次光灵箭不消耗，发光延长+5/10/15秒 */
     private fun executeXinHaoDan(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.sendMessage(Component.text("§a✦ 信号弹：下次射出光灵箭不消耗，发光时长+${5+lv*5}秒（共${10+lv*5}秒）"))
+        // Store the signal flare level for the next spectral arrow shot
+        signalFlarePlayers[p.uniqueId] = lv
+        p.sendMessage(Component.text("§a✦ 信号弹：下次光灵箭不消耗，目标发光时长+${5+lv*5}秒"))
         return true
+    }
+
+    /** Active signal flare tracking: UUID -> level */
+    private val signalFlarePlayers = mutableMapOf<java.util.UUID, Int>()
+
+    /** Called when player shoots a bow — applies signal flare effect if active */
+    fun onSignalFlareShoot(player: Player, arrow: org.bukkit.entity.AbstractArrow, ammo: org.bukkit.inventory.ItemStack) {
+        val lv = signalFlarePlayers.remove(player.uniqueId) ?: return
+        if (ammo.type != org.bukkit.Material.SPECTRAL_ARROW) return
+        // Refund the arrow
+        player.inventory.addItem(org.bukkit.inventory.ItemStack(org.bukkit.Material.SPECTRAL_ARROW, 1))
+        // Store glow extension info on the arrow
+        arrow.persistentDataContainer.set(
+            org.bukkit.NamespacedKey("starlightre", "signal_flare_lv"),
+            org.bukkit.persistence.PersistentDataType.INTEGER,
+            lv
+        )
+    }
+
+    /** Called when projectile hits — extends glow duration */
+    fun onSignalFlareHit(event: org.bukkit.event.entity.ProjectileHitEvent) {
+        val arrow = event.entity
+        val lv = arrow.persistentDataContainer.get(
+            org.bukkit.NamespacedKey("starlightre", "signal_flare_lv"),
+            org.bukkit.persistence.PersistentDataType.INTEGER
+        ) ?: return
+        val target = event.hitEntity as? org.bukkit.entity.LivingEntity ?: return
+        val extraTicks = (5 + lv * 5) * 20
+        target.addPotionEffect(org.bukkit.potion.PotionEffect(
+            org.bukkit.potion.PotionEffectType.GLOWING, 10 * 20 + extraTicks, 0, false, false
+        ))
     }
 
     /** 人力资源管理: 全服广播急迫 */

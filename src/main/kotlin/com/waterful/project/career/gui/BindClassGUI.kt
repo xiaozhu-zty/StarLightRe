@@ -16,15 +16,18 @@ import org.bukkit.inventory.ItemStack
 object BindClassGUI {
 
     const val TITLE = "选择职业 — 绑定热键"
+    private val targetSlots = mutableMapOf<java.util.UUID, Int>()
 
     fun open(player: Player, targetSlot: Int) {
+        targetSlots[player.uniqueId] = targetSlot
         val cp = CareerManager.getPlayer(player) ?: return
         val inv = Bukkit.createInventory(null, 27, Component.text(TITLE))
 
         val slots = listOf(10, 11, 12, 13, 14, 15)
         CareerClass.entries.forEachIndexed { i, clazz ->
-            val hasBranch = cp.unlockedBranches.keys.any { it.careerClass == clazz }
-            inv.setItem(slots[i], classIcon(clazz, hasBranch, targetSlot))
+            val branches = cp.unlockedBranches.keys.filter { it.careerClass == clazz }
+            val hasBranch = branches.isNotEmpty()
+            inv.setItem(slots[i], classIcon(clazz, hasBranch, branches))
         }
 
         // Back to bind panel
@@ -40,21 +43,18 @@ object BindClassGUI {
         if (idx < 0) return true
         val clazz = CareerClass.entries.getOrNull(idx) ?: return true
         player.closeInventory()
-        BindBranchGUI.open(player, clazz, -1) // targetSlot will be passed through
+        BindBranchGUI.open(player, clazz, targetSlots[player.uniqueId] ?: 0)
         return true
     }
 
-    private fun classIcon(clazz: CareerClass, hasBranch: Boolean, slot: Int): ItemStack {
+    private fun classIcon(clazz: CareerClass, hasBranch: Boolean, branches: List<com.waterful.project.career.model.Branch>): ItemStack {
         val item = ItemStack(if (hasBranch) clazz.material else Material.GRAY_DYE)
         item.editMeta {
             it.displayName(Component.text(clazz.displayName, if (hasBranch) NamedTextColor.GOLD else NamedTextColor.GRAY))
             val desc = mutableListOf<Component>()
             if (hasBranch) {
                 desc.add(Component.text("已解锁分支：", NamedTextColor.GREEN))
-                Branch.fromCareerClass(clazz).forEach { b ->
-                    if (CareerManager.getPlayer(Bukkit.getPlayer(clazz.displayName) ?: return@forEach)?.unlockedBranches?.containsKey(b) == true)
-                        desc.add(Component.text("  ✓ ${b.displayName}", NamedTextColor.GRAY))
-                }
+                branches.forEach { b -> desc.add(Component.text("  ✓ ${b.displayName}", NamedTextColor.GRAY)) }
                 desc.add(Component.text(""))
                 desc.add(Component.text("点击查看可绑定技能", NamedTextColor.GOLD))
             } else {

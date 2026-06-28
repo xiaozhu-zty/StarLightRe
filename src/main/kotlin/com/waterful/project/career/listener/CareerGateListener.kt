@@ -101,10 +101,23 @@ class CareerGateListener : Listener {
             }
         }
 
-        // Check demolitionist items
+        // Check demolitionist items — gate + failure rate
         if (resultType in demoGatedRecipes) {
             if (CareerManager.hasBranch(cp, Branch.ARCHITECT_DEMOLITION)) {
                 if (debug) player.sendMessage(debugPass("爆破师", resultType.name))
+                // Apply failure/explosion mechanic based on 稳定三硝基甲苯 level
+                val skillLv = cp.getSkill(Branch.ARCHITECT_DEMOLITION, 0)?.currentLevel ?: 0
+                val failRate = when (skillLv) { 0 -> 0.50; 1 -> 0.25; 2 -> 0.10; 3 -> 0.0; else -> 0.50 }
+                if (failRate > 0 && DebugManager.rollChance(player, (failRate * 100).toInt(), "稳定三硝基甲苯 — 合成失败率")) {
+                    event.isCancelled = true
+                    player.sendMessage("§c合成失败！TNT不稳定...")
+                    // Explosion chance on failure
+                    val explodeRate = when (skillLv) { 0 -> 0.50; 1 -> 0.25; 2 -> 0.10; else -> 0.50 }
+                    if (DebugManager.rollChance(player, (explodeRate * 100).toInt(), "稳定三硝基甲苯 — 合成爆炸")) {
+                        player.world.createExplosion(player.location, 2.0f, false, false)
+                        player.sendMessage("§c⚠ TNT在合成台中爆炸了！")
+                    }
+                }
             } else {
                 event.isCancelled = true
                 player.sendMessage(if (debug) debugFail("爆破师", resultType.name) else gateMsg("爆破师"))
@@ -122,6 +135,92 @@ class CareerGateListener : Listener {
                 return
             }
         }
+    }
+
+    // ========== STRUCTURE ENGINEER GATING (装饰方块/染色方块/玻璃) ==========
+
+    private val structureGated: Set<Material> = setOf(
+        // 装饰性方块
+        Material.BELL, Material.CHISELED_BOOKSHELF, Material.FLETCHING_TABLE,
+        Material.JUKEBOX, Material.LECTERN, Material.LODESTONE, Material.RESPAWN_ANCHOR,
+        Material.END_ROD, Material.LOOM,
+        // 染色方块
+        Material.WHITE_CONCRETE_POWDER, Material.WHITE_CONCRETE, Material.WHITE_TERRACOTTA,
+        Material.WHITE_GLAZED_TERRACOTTA, Material.WHITE_WOOL, Material.WHITE_CARPET,
+        // 玻璃
+        Material.GLASS, Material.GLASS_PANE, Material.TINTED_GLASS,
+        Material.WHITE_STAINED_GLASS, Material.WHITE_STAINED_GLASS_PANE,
+        // 其他
+        Material.LANTERN, Material.SOUL_LANTERN, Material.BARREL,
+        Material.ENDER_CHEST, Material.SHULKER_BOX, Material.ITEM_FRAME,
+        Material.GLOW_ITEM_FRAME, Material.WHITE_BANNER, Material.BOOKSHELF,
+        Material.SCAFFOLDING
+    )
+
+    @EventHandler(priority = EventPriority.LOW)
+    fun onCraftStructureBlock(event: CraftItemEvent) {
+        val result = event.recipe?.result ?: return
+        if (result.type !in structureGated) return
+        val p = event.whoClicked as? Player ?: return
+        val cp = CareerManager.getPlayer(p) ?: return
+        if (CareerManager.hasBranch(cp, Branch.ARCHITECT_STRUCTURE)) return
+        event.isCancelled = true
+        val debug = DebugManager.isListening(p.uniqueId)
+        p.sendMessage(if (debug) debugFail("结构工程师", result.type.name) else gateMsg("结构工程师"))
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    fun onPlaceStructureBlock(event: org.bukkit.event.block.BlockPlaceEvent) {
+        if (event.block.type !in structureGated) return
+        val p = event.player
+        val cp = CareerManager.getPlayer(p) ?: return
+        if (CareerManager.hasBranch(cp, Branch.ARCHITECT_STRUCTURE)) return
+        event.isCancelled = true
+        val debug = DebugManager.isListening(p.uniqueId)
+        p.sendMessage(if (debug) debugFail("结构工程师", event.block.type.name) else gateMsg("结构工程师"))
+    }
+
+    // ========== DEMOLITIONIST GATING (打火石) ==========
+
+    @EventHandler(priority = EventPriority.LOW)
+    fun onFlintAndSteel(event: PlayerInteractEvent) {
+        if (event.action != Action.RIGHT_CLICK_AIR && event.action != Action.RIGHT_CLICK_BLOCK) return
+        val p = event.player
+        if (p.inventory.itemInMainHand.type != Material.FLINT_AND_STEEL &&
+            p.inventory.itemInOffHand.type != Material.FLINT_AND_STEEL) return
+        if (CareerManager.getPlayer(p)?.let { CareerManager.hasBranch(it, Branch.ARCHITECT_DEMOLITION) } == true) return
+        event.isCancelled = true
+        val debug = DebugManager.isListening(p.uniqueId)
+        p.sendMessage(if (debug) debugFail("爆破师", "打火石") else gateMsg("爆破师"))
+    }
+
+    // ========== LUMBERJACK GATING: 非伐木工破坏木头仅50%掉落 ==========
+
+    private val woodTypes = setOf(
+        Material.OAK_LOG, Material.SPRUCE_LOG, Material.BIRCH_LOG, Material.JUNGLE_LOG,
+        Material.ACACIA_LOG, Material.DARK_OAK_LOG, Material.MANGROVE_LOG, Material.CHERRY_LOG,
+        Material.CRIMSON_STEM, Material.WARPED_STEM,
+        Material.OAK_WOOD, Material.SPRUCE_WOOD, Material.BIRCH_WOOD, Material.JUNGLE_WOOD,
+        Material.ACACIA_WOOD, Material.DARK_OAK_WOOD, Material.MANGROVE_WOOD, Material.CHERRY_WOOD,
+        Material.CRIMSON_HYPHAE, Material.WARPED_HYPHAE,
+        Material.STRIPPED_OAK_LOG, Material.STRIPPED_SPRUCE_LOG, Material.STRIPPED_BIRCH_LOG,
+        Material.STRIPPED_JUNGLE_LOG, Material.STRIPPED_ACACIA_LOG, Material.STRIPPED_DARK_OAK_LOG,
+        Material.STRIPPED_MANGROVE_LOG, Material.STRIPPED_CHERRY_LOG,
+        Material.STRIPPED_CRIMSON_STEM, Material.STRIPPED_WARPED_STEM,
+        Material.STRIPPED_OAK_WOOD, Material.STRIPPED_SPRUCE_WOOD, Material.STRIPPED_BIRCH_WOOD,
+        Material.STRIPPED_JUNGLE_WOOD, Material.STRIPPED_ACACIA_WOOD, Material.STRIPPED_DARK_OAK_WOOD,
+        Material.STRIPPED_MANGROVE_WOOD, Material.STRIPPED_CHERRY_WOOD,
+        Material.STRIPPED_CRIMSON_HYPHAE, Material.STRIPPED_WARPED_HYPHAE
+    )
+
+    @EventHandler(priority = EventPriority.LOW)
+    fun onBreakWood(event: org.bukkit.event.block.BlockBreakEvent) {
+        if (event.block.type !in woodTypes) return
+        val p = event.player
+        if (CareerManager.getPlayer(p)?.let { CareerManager.hasBranch(it, Branch.WORKER_LUMBERJACK) } == true) return
+        // Non-lumberjack: 50% drop chance
+        if (DebugManager.rollChance(p, 50, "非伐木工 — 木头掉落50%")) return
+        event.isDropItems = false
     }
 
     // ========== REDSTONE PLACEMENT GATING ==========

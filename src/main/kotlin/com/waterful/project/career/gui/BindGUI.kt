@@ -99,7 +99,6 @@ object BindGUI {
         }
 
         // Open multi-level bind GUI
-        BindSkillSelectTarget.targetSlot = bindIndex
         player.closeInventory()
         BindClassGUI.open(player, bindIndex)
         return true

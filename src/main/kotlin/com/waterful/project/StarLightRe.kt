@@ -80,6 +80,9 @@ class StarLightRe : JavaPlugin() {
         // Start resonance tick task
         startResonanceTask()
 
+        // Start fisherman passive effects tick (Luck + Conduit Power)
+        startFishermanTick()
+
         logger.info("✦ ${description.name} v${description.version} 已启用！")
         logger.info("✦ 生涯系统已加载：6职业 | 24分支 | 72技能 | 72顿悟")
     }
@@ -95,5 +98,28 @@ class StarLightRe : JavaPlugin() {
         server.scheduler.runTaskTimer(this, Runnable {
             ResonanceManager.tick()
         }, tickInterval, tickInterval)
+    }
+
+    private fun startFishermanTick() {
+        server.scheduler.runTaskTimer(this, Runnable {
+            for (player in server.onlinePlayers) {
+                val cp = com.waterful.project.career.manager.CareerManager.getPlayer(player) ?: continue
+                if (com.waterful.project.career.manager.CareerManager.hasBranch(cp,
+                        com.waterful.project.career.model.Branch.FARMER_FISHERMAN)) {
+                    player.addPotionEffect(org.bukkit.potion.PotionEffect(
+                        org.bukkit.potion.PotionEffectType.LUCK, 40, 0, false, false, true))
+                    if (player.isInWater) {
+                        player.addPotionEffect(org.bukkit.potion.PotionEffect(
+                            org.bukkit.potion.PotionEffectType.CONDUIT_POWER, 40, 0, false, false, true))
+                    }
+                    // 骇浪征服者: ocean + storm = resistance
+                    val biome = player.location.block.biome.toString()
+                    if (biome.contains("OCEAN") && !player.world.isClearWeather) {
+                        player.addPotionEffect(org.bukkit.potion.PotionEffect(
+                            org.bukkit.potion.PotionEffectType.RESISTANCE, 40, 1, false, false, true))
+                    }
+                }
+            }
+        }, 20L, 20L)
     }
 }
