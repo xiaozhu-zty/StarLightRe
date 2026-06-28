@@ -42,7 +42,7 @@ object BindGUI {
         }
 
         for (i in 0..8) {
-            val slot = 10 + i
+            val slot = 9 + i
             val bindStr = cp.hotkeyBinds[i]
 
             val icon = when {
@@ -83,7 +83,7 @@ object BindGUI {
             return true
         }
 
-        val bindIndex = slot - 10
+        val bindIndex = slot - 9
         if (bindIndex !in 0..8) return true
 
         val cp = CareerManager.getPlayer(player) ?: return true
