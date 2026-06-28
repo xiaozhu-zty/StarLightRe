@@ -20,7 +20,7 @@ careers:
               - "获得掉落物"
           - id: "architect_structure_skill_1"
             name: "识色敏锐"
-            type: PASSIVE
+            type: ACTIVE
             icon: "RED_DYE"
             cooldown: [20, 20, 20]
             levels:
@@ -107,9 +107,9 @@ careers:
             type: PASSIVE
             icon: "DETECTOR_RAIL"
             levels:
-              - "不消耗方块"
-              - "不消耗方块"
-              - "不消耗方块"
+              - "放置铁轨类方块时有概率不消耗"
+              - "放置铁轨类方块时有概率不消耗"
+              - "放置铁轨类方块时不消耗"
           - id: "architect_traffic_skill_1"
             name: "追加动力"
             type: ACTIVE
@@ -133,7 +133,7 @@ careers:
             name: "下界开路者"
             icon: "NETHERRACK"
             cooldown: 0
-            description: "不消耗方块"
+            description: "在下界放置铁轨时不消耗方块"
           - id: "architect_traffic_eureka_1"
             name: "精炼钢轨"
             icon: "POWERED_RAIL"
@@ -153,9 +153,9 @@ careers:
             type: PASSIVE
             icon: "GUNPOWDER"
             levels:
-              - "失败时有25%概率以合成台为中心产生一次爆炸"
-              - "失败时有10%概率以合成台为中心产生一次爆炸"
-              - "合成TNT、TNT矿车时必定成功"
+              - "合成TNT时有75%成功率（失败时合成台爆炸）"
+              - "合成TNT时有90%成功率（失败时合成台爆炸）"
+              - "合成TNT、TNT矿车时100%成功"
           - id: "architect_demolition_skill_1"
             name: "气浪行者"
             type: ACTIVE
@@ -256,7 +256,7 @@ careers:
             name: "文火慢炖"
             type: ACTIVE
             icon: "MUSHROOM_STEW"
-            cooldown: [600, 600, 600]
+            cooldown: [60, 60, 60]
             levels:
               - "下次合成汤煲食品时额外获得1个随机汤煲食品"
               - "此技能CD-15"
@@ -310,7 +310,7 @@ careers:
             name: "困兽天敌"
             type: ACTIVE
             icon: "RABBIT_HIDE"
-            cooldown: [450, 450, 450]
+            cooldown: [120, 120, 120]
             levels:
               - "使周围8格内所有陆生动物获得10秒的缓慢I、发光"
               - "使周围12格内所有陆生动物获得20秒的缓慢II、发光"
@@ -348,7 +348,7 @@ careers:
             name: "奇味异珍"
             type: ACTIVE
             icon: "CHORUS_FRUIT"
-            cooldown: [120, 120, 120]
+            cooldown: [30, 30, 30]
             levels:
               - "下次食用以下任一食物时，触发相应效果：紫颂果→额外获得4饥饿值+传送；金胡萝卜→使自己和周围4格内所有非敌对玩家获得2饥饿值"
               - "补充：发光浆果→额外获得2饥饿值+发光和速度II"
@@ -396,9 +396,9 @@ careers:
               - "使用附魔台进行附魔时有60%概率使消耗的经验等级-3"
           - id: "scholar_enchanter_skill_1"
             name: "魔力虹吸"
-            type: PASSIVE
+            type: ACTIVE
             icon: "GRINDSTONE"
-            cooldown: [5400, 5400, 5400]
+            cooldown: [20, 20, 20]
             levels:
               - "下次使用砂轮祛魔时，额外获得5经验，且有10%概率回复该物品20%的耐久"
               - "且有20%概率回复该物品20%的耐久"
@@ -443,9 +443,9 @@ careers:
               - "放置红石粉时有8%概率不消耗"
           - id: "scholar_redstone_skill_1"
             name: "自动化生产"
-            type: PASSIVE
+            type: ACTIVE
             icon: "PISTON"
-            cooldown: [240, 240, 240]
+            cooldown: [30, 30, 30]
             levels:
               - "合成红石器械时有10%概率额外获得1个相同零件(CD:240秒)"
               - "合成红石器械时有20%概率额外获得1个相同零件(CD:240秒)"
@@ -535,9 +535,9 @@ careers:
               - "手持书Shift+右键讲台可以消耗30经验等级和1技能点获取一本技能之书"
           - id: "scholar_teacher_skill_1"
             name: "厚积薄发"
-            type: PASSIVE
+            type: ACTIVE
             icon: "GLOWSTONE_DUST"
-            cooldown: [240, 240, 240]
+            cooldown: [120, 120, 120]
             levels:
               - "下次手持书Shift+右键书架时，有10%概率只消耗1技能点就获得1本技能之书"
               - "下次手持书Shift+右键书架时，有20%概率只消耗1技能点就获得1本技能之书"
@@ -587,7 +587,7 @@ careers:
             name: "收获涛声"
             type: ACTIVE
             icon: "COD"
-            cooldown: [540, 540, 540]
+            cooldown: [30, 30, 30]
             levels:
               - "1个相应的鱼"
               - "此技能的CD-10"
@@ -596,7 +596,7 @@ careers:
             name: "大洋眷顾"
             type: ACTIVE
             icon: "HEART_OF_THE_SEA"
-            cooldown: [210, 210, 210]
+            cooldown: [540, 540, 540]
             levels:
               - "获得40秒的幸运II；若位于海洋生物群系，则时间变为60秒"
               - "获得50秒的幸运II；若位于海洋生物群系，则时间变为90秒"
@@ -678,7 +678,7 @@ careers:
             name: "饲料调配"
             type: ACTIVE
             icon: "HAY_BLOCK"
-            cooldown: [540, 540, 540]
+            cooldown: [20, 20, 20]
             levels:
               - "下次喂养幼年牛、猪、鸡、绵羊时，使其立即成长至成年"
               - "此技能CD-5"
@@ -907,16 +907,16 @@ careers:
               - "使用锻造台时，有20%概率不消耗下界合金锭"
           - id: "worker_toolmaker_skill_1"
             name: "熟能生巧"
-            type: PASSIVE
+            type: ACTIVE
             icon: "ANVIL"
-            cooldown: [480, 480, 480]
+            cooldown: [240, 240, 240]
             levels:
               - "使用铁砧时(CD:480秒)额外获得4经验等级"
               - "使用铁砧时(CD:480秒)额外获得6经验等级"
               - "使用铁砧时(CD:480秒)额外获得8经验等级"
           - id: "worker_toolmaker_skill_2"
             name: "关键结构加固"
-            type: PASSIVE
+            type: ACTIVE
             icon: "CRAFTING_TABLE"
             cooldown: [900, 900, 900]
             levels:
@@ -959,7 +959,7 @@ careers:
             name: "信号弹"
             type: ACTIVE
             icon: "SPECTRAL_ARROW"
-            cooldown: [30, 30, 30]
+            cooldown: [20, 20, 20]
             levels:
               - "下次射出光灵箭击中目标时不消耗光灵箭，且使该目标发光时长+5秒（共15秒）"
               - "下次射出光灵箭击中目标时不消耗光灵箭，且使该目标发光时长+10秒（共20秒）"

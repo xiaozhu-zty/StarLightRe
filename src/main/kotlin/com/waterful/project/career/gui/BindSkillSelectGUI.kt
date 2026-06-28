@@ -27,6 +27,7 @@ object BindSkillSelectGUI {
         // Active skills
         for ((index, skill) in cp.getSkills(branch).withIndex()) {
             if (skill.skillDef.skillType != SkillType.ACTIVE || skill.currentLevel < 1) continue
+            if (!skill.skillDef.bindable) continue
             inv.setItem(slot, skillBindIcon(skill.skillDef.name, index, branch, targetSlot))
             slot++
         }
@@ -58,6 +59,7 @@ object BindSkillSelectGUI {
         var skillOffset = 0
         for ((index, skill) in cp.getSkills(branch).withIndex()) {
             if (skill.skillDef.skillType != SkillType.ACTIVE || skill.currentLevel < 1) continue
+            if (!skill.skillDef.bindable) continue
             if (10 + skillOffset == slot) {
                 // Bind this skill
                 val bindIndex = BindSkillSelectTarget.targetSlot

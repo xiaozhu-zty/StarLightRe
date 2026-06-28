@@ -10,7 +10,9 @@ data class SkillDef(
     /** Level-specific effect descriptions (index 0 = lvl.1, index 1 = lvl.2, index 2 = lvl.3) */
     val descriptions: List<String> = listOf("", "", ""),
     /** Cooldown in seconds per level */
-    val cooldownSeconds: List<Int> = listOf(30, 20, 10)
+    val cooldownSeconds: List<Int> = listOf(30, 20, 10),
+    /** Whether this skill can be bound to a hotkey (false for auto-fire skills) */
+    val bindable: Boolean = true
 ) {
     fun getDescription(level: Int): String =
         descriptions.getOrElse(level - 1) { "" }

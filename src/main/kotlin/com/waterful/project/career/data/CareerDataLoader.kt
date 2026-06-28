@@ -51,15 +51,15 @@ object CareerDataLoader {
                         (it as? Number)?.toInt() ?: 60
                     } ?: listOf(60, 60, 60)
 
+                    val bindable = skillMap["bindable"]?.let {
+                        it.toString().toBooleanStrictOrNull() ?: true
+                    } ?: true
+
                     skillDefs[id] = SkillDef(
-                        id = id,
-                        name = name,
-                        branch = branch,
-                        index = index,
-                        skillType = skillType,
-                        effectId = id,
-                        descriptions = descriptions,
-                        cooldownSeconds = cooldowns
+                        id = id, name = name, branch = branch, index = index,
+                        skillType = skillType, effectId = id,
+                        descriptions = descriptions, cooldownSeconds = cooldowns,
+                        bindable = bindable
                     )
                 }
 

@@ -43,8 +43,8 @@ object BranchGUI {
 
         // Row 1 (slots 10, 12-14, 16):
         inv.setItem(10, branchInfoIcon(branch, cp))           // Branch info
-        skills.forEachIndexed { i, skill ->                   // Skill icons
-            inv.setItem(12 + i, skillHeaderIcon(skill, i))
+        skills.forEachIndexed { i, skill ->
+            inv.setItem(12 + i, skillHeaderIcon(skill, i, cp))
         }
         inv.setItem(16, eurekaGuideIcon(branch, isMaxed, hasEureka)) // Eureka guide
 
@@ -108,8 +108,16 @@ object BranchGUI {
 
     private fun handleSkillClick(player: Player, cp: CareerPlayer, branch: Branch, index: Int, isShift: Boolean) {
         val skill = cp.getSkill(branch, index) ?: return
-        if (isShift && skill.skillDef.skillType == SkillType.ACTIVE && skill.currentLevel > 0) {
-            // Redirect to BindGUI for hotkey management
+        if (isShift && !skill.skillDef.bindable && skill.currentLevel > 0) {
+            // Toggle auto-cast for non-bindable skills
+            val autoKey = "${branch.name}_skill_${index}_auto"
+            val current = cp.autoCastSkills[autoKey] ?: false
+            cp.autoCastSkills[autoKey] = !current
+            player.sendMessage("§6${skill.skillDef.name} 自动释放：${if (!current) "§aON" else "§cOFF"}")
+            player.closeInventory(); open(player, branch)
+            return
+        }
+        if (isShift && skill.skillDef.bindable && skill.skillDef.skillType == SkillType.ACTIVE && skill.currentLevel > 0) {
             player.closeInventory()
             player.sendMessage("§6请在热键绑定面板 (Shift+2) 中管理快捷键")
             return
@@ -163,16 +171,29 @@ object BranchGUI {
         return item
     }
 
-    private fun skillHeaderIcon(skill: com.waterful.project.career.model.SkillInstance, index: Int): ItemStack {
+    private fun skillHeaderIcon(skill: com.waterful.project.career.model.SkillInstance, index: Int, cp: CareerPlayer? = null): ItemStack {
         val type = if (skill.skillDef.skillType == SkillType.PASSIVE) "被动" else "主动"
-        val item = if (skill.skillDef.skillType == SkillType.PASSIVE) ItemStack(Material.BOOK) else ItemStack(Material.BLAZE_ROD)
+        val material = when {
+            !skill.skillDef.bindable -> Material.KNOWLEDGE_BOOK // Auto-fire skills
+            skill.skillDef.skillType == SkillType.PASSIVE -> Material.BOOK
+            else -> Material.BLAZE_ROD
+        }
+        val item = ItemStack(material)
         item.editMeta {
             it.displayName(Component.text("${skill.skillDef.name} [$type]", if (skill.skillDef.skillType == SkillType.PASSIVE) NamedTextColor.AQUA else NamedTextColor.GOLD))
             val desc = mutableListOf<Component>()
             desc.add(Component.text("等级：Lv.${skill.currentLevel}/3", NamedTextColor.YELLOW))
-            desc.add(Component.text(""))
+            if (!skill.skillDef.bindable && skill.currentLevel > 0) {
+                val autoKey = "${skill.skillDef.branch.name}_skill_${index}_auto"
+                val isAuto = cp?.autoCastSkills?.get(autoKey) ?: false
+                desc.add(Component.text("自动释放：${if (isAuto) "§aON" else "§cOFF"}", NamedTextColor.GRAY))
+                desc.add(Component.text("Shift+点击切换", NamedTextColor.DARK_GRAY, TextDecoration.ITALIC))
+                desc.add(Component.text(""))
+            } else {
+                desc.add(Component.text(""))
+            }
             desc.add(Component.text("点击升级此技能", NamedTextColor.GRAY, TextDecoration.ITALIC))
-            if (skill.skillDef.skillType == SkillType.ACTIVE && skill.currentLevel > 0) {
+            if (skill.skillDef.bindable && skill.skillDef.skillType == SkillType.ACTIVE && skill.currentLevel > 0) {
                 desc.add(Component.text("Shift+左击绑定快捷键", NamedTextColor.LIGHT_PURPLE, TextDecoration.ITALIC))
             }
             it.lore(desc)
