@@ -99,7 +99,6 @@ object DelCareerGUI {
         player.sendMessage("§a✦ 已重置职业：§e${careerClass.displayName}§a（移除了 ${branches.size} 个分支）")
         player.sendMessage("§7请使用 Shift+F 打开生涯面板重新选择职业")
 
-        player.closeInventory()
         open(player) // Refresh
     }
 
@@ -112,10 +111,10 @@ object DelCareerGUI {
         cp.autoCastSkills.keys.removeAll { it.startsWith(branch.name) }
         cp.cooldowns.keys.removeAll { it.startsWith(branch.name) }
         CareerManager.clearHotkeyBindsForBranch(cp, branch)
+        player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
 
         player.sendMessage("§a✦ 已删除分支：§e${branch.displayName}§a（${branch.careerClass.displayName}）")
 
-        player.closeInventory()
         open(player) // Refresh
     }
 
@@ -127,6 +126,7 @@ object DelCareerGUI {
         cp.autoCastSkills.clear()
         cp.cooldowns.clear()
         cp.hotkeyBinds.clear()
+        player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
 
         player.sendMessage("§a✦ 已重置所有职业和分支！")
         player.sendMessage("§7请使用 Shift+F 打开生涯面板重新选择职业")
@@ -141,10 +141,10 @@ object DelCareerGUI {
         cp.autoCastSkills.clear()
         cp.cooldowns.clear()
         cp.hotkeyBinds.clear()
+        player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
 
         player.sendMessage("§a✦ 已重置所有分支（保留职业选择）！")
 
-        player.closeInventory()
         open(player) // Refresh
     }
 

@@ -50,7 +50,7 @@ fun Player.hasEureka(branch: Branch, eurekaIndex: Int = -1): Boolean {
     val cp = career() ?: return false
     val eureka = cp.chosenEurekas[branch] ?: return false
     if (eurekaIndex < 0) return true
-    return eureka.eurekaDef.id.endsWith("_eureka_${eurekaIndex + 1}")
+    return eureka.eurekaDef.id.endsWith("_eureka_$eurekaIndex")
 }
 
 // =============================================================================

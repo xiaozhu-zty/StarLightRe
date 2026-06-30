@@ -47,6 +47,27 @@ class PassiveSkillListener : Listener {
         EntityType.HOGLIN to Material.COOKED_PORKCHOP, EntityType.MOOSHROOM to Material.COOKED_BEEF
     )
 
+    // ===== 斩首 (Warrior Hunter eureka 0): head drops (independent handler — NOT gated by livestock check) =====
+    @EventHandler
+    fun onDecapitation(event: EntityDeathEvent) {
+        val killer = event.entity.killer ?: return
+        if (!killer.hasBranch(Branch.WARRIOR_HUNTER) || !killer.hasEureka(Branch.WARRIOR_HUNTER, 0)) return
+        val heads = mapOf(
+            EntityType.WITHER_SKELETON to Pair(5, Material.WITHER_SKELETON_SKULL),
+            EntityType.SKELETON to Pair(2, Material.SKELETON_SKULL),
+            EntityType.ZOMBIE to Pair(2, Material.ZOMBIE_HEAD),
+            EntityType.CREEPER to Pair(2, Material.CREEPER_HEAD),
+            EntityType.PIGLIN to Pair(1, Material.PIGLIN_HEAD),
+            EntityType.PIGLIN_BRUTE to Pair(1, Material.PIGLIN_HEAD),
+            EntityType.ENDER_DRAGON to Pair(5, Material.DRAGON_HEAD)
+        )
+        heads[event.entityType]?.let { (chance, headMat) ->
+            if (killer.roll(chance, "斩首·${event.entityType}"))
+                event.entity.world.dropItemNaturally(event.entity.location, ItemStack(headMat, 1))
+        }
+    }
+
+    // ===== CHEF_BUTCHER: livestock drops =====
     @EventHandler
     fun onEntityDeath(event: EntityDeathEvent) {
         val killer = event.entity.killer ?: return
@@ -62,23 +83,6 @@ class PassiveSkillListener : Listener {
         if (level >= 1 && event.entity.fireTicks <= 0) {
             val mat = if (level >= 3) cookedMeat[event.entityType] else rawMeat[event.entityType]
             mat?.let { event.entity.world.dropItemNaturally(event.entity.location, ItemStack(it, 1)) }
-        }
-
-        // 斩首 (Warrior Hunter eureka 0): head drops
-        if (killer.hasBranch(Branch.WARRIOR_HUNTER) && killer.hasEureka(Branch.WARRIOR_HUNTER)) {
-            val heads = mapOf(
-                EntityType.WITHER_SKELETON to Pair(5, Material.WITHER_SKELETON_SKULL),
-                EntityType.SKELETON to Pair(2, Material.SKELETON_SKULL),
-                EntityType.ZOMBIE to Pair(2, Material.ZOMBIE_HEAD),
-                EntityType.CREEPER to Pair(2, Material.CREEPER_HEAD),
-                EntityType.PIGLIN to Pair(1, Material.PIGLIN_HEAD),
-                EntityType.PIGLIN_BRUTE to Pair(1, Material.PIGLIN_HEAD),
-                EntityType.ENDER_DRAGON to Pair(5, Material.DRAGON_HEAD)
-            )
-            heads[event.entityType]?.let { (chance, headMat) ->
-                if (killer.roll(chance, "斩首·${event.entityType}"))
-                    event.entity.world.dropItemNaturally(event.entity.location, ItemStack(headMat, 1))
-            }
         }
     }
 
@@ -115,12 +119,27 @@ class PassiveSkillListener : Listener {
             }
         }
 
-        // 熔炉改良 (Worker Smelter): extra product
+        // 熔炉改良 (Worker Smelter): extra product — roll per item extracted
         if (p.hasBranch(Branch.WORKER_SMELTER)) {
             val lv = p.skillLevel(Branch.WORKER_SMELTER, 0)
-            if (lv >= 1 && p.roll(5 + lv * 5, "熔炉改良·Lv.$lv ${mat.name}")) {
-                p.world.dropItemNaturally(p.location, ItemStack(mat, 1))
+            if (lv >= 1) {
+                var extraCount = 0
+                repeat(event.itemAmount) {
+                    if (p.roll(5 + lv * 5, "熔炉改良·Lv.$lv ${mat.name}"))
+                        extraCount++
+                }
+                if (extraCount > 0)
+                    p.world.dropItemNaturally(p.location, ItemStack(mat, extraCount))
             }
+        }
+
+        // 回炉重铸 (Worker Smelter eureka 1): blast furnace nugget bonus
+        if (p.hasEureka(Branch.WORKER_SMELTER, 1) &&
+            (mat == Material.IRON_NUGGET || mat == Material.GOLD_NUGGET) &&
+            event.block.type == Material.BLAST_FURNACE) {
+            p.world.dropItemNaturally(p.location, ItemStack(mat, 8))
+            if (com.waterful.project.career.manager.DebugManager.isListening(p.uniqueId))
+                p.sendMessage("§7[Debug] 回炉重铸：额外+8 ${mat.name}")
         }
     }
 
@@ -215,7 +234,7 @@ class PassiveSkillListener : Listener {
         if (p.world.environment != World.Environment.NETHER) return
         if (event.block.type != Material.CRIMSON_STEM && event.block.type != Material.WARPED_STEM) return
         if (!p.hasBranch(Branch.WORKER_LUMBERJACK)) return
-        if (!p.hasEureka(Branch.WORKER_LUMBERJACK, 1)) return // eureka index 1 = 抽丝剥茧
+        if (!p.hasEureka(Branch.WORKER_LUMBERJACK, 2)) return // eureka index 2 = 抽丝剥茧
         if (p.roll(33, "抽丝剥茧 ${event.block.type.name}")) {
             event.block.world.dropItemNaturally(event.block.location, ItemStack(event.block.type, 1))
         }
@@ -375,24 +394,116 @@ class PassiveSkillListener : Listener {
 
     // ===== WORKER_LUMBERJACK skill 0 (全力劈砍): haste on wood break =====
 
+    private val woodBlocks = setOf(
+        Material.OAK_LOG, Material.SPRUCE_LOG, Material.BIRCH_LOG, Material.JUNGLE_LOG,
+        Material.ACACIA_LOG, Material.DARK_OAK_LOG, Material.MANGROVE_LOG, Material.CHERRY_LOG,
+        Material.CRIMSON_STEM, Material.WARPED_STEM,
+        Material.OAK_WOOD, Material.SPRUCE_WOOD, Material.BIRCH_WOOD, Material.JUNGLE_WOOD,
+        Material.ACACIA_WOOD, Material.DARK_OAK_WOOD, Material.MANGROVE_WOOD, Material.CHERRY_WOOD,
+        Material.CRIMSON_HYPHAE, Material.WARPED_HYPHAE,
+        Material.STRIPPED_OAK_LOG, Material.STRIPPED_SPRUCE_LOG, Material.STRIPPED_BIRCH_LOG,
+        Material.STRIPPED_JUNGLE_LOG, Material.STRIPPED_ACACIA_LOG, Material.STRIPPED_DARK_OAK_LOG,
+        Material.STRIPPED_MANGROVE_LOG, Material.STRIPPED_CHERRY_LOG,
+        Material.STRIPPED_CRIMSON_STEM, Material.STRIPPED_WARPED_STEM,
+        Material.STRIPPED_OAK_WOOD, Material.STRIPPED_SPRUCE_WOOD, Material.STRIPPED_BIRCH_WOOD,
+        Material.STRIPPED_JUNGLE_WOOD, Material.STRIPPED_ACACIA_WOOD, Material.STRIPPED_DARK_OAK_WOOD,
+        Material.STRIPPED_MANGROVE_WOOD, Material.STRIPPED_CHERRY_WOOD,
+        Material.STRIPPED_CRIMSON_HYPHAE, Material.STRIPPED_WARPED_HYPHAE,
+        Material.OAK_PLANKS, Material.SPRUCE_PLANKS, Material.BIRCH_PLANKS, Material.JUNGLE_PLANKS,
+        Material.ACACIA_PLANKS, Material.DARK_OAK_PLANKS, Material.MANGROVE_PLANKS, Material.CHERRY_PLANKS,
+        Material.CRIMSON_PLANKS, Material.WARPED_PLANKS, Material.BAMBOO_PLANKS,
+        Material.BAMBOO_BLOCK, Material.STRIPPED_BAMBOO_BLOCK
+    )
+
     @EventHandler
     fun onBreakWood(event: org.bukkit.event.block.BlockBreakEvent) {
         val p = event.player
         if (!p.hasBranch(Branch.WORKER_LUMBERJACK)) return
+        if (event.block.type !in woodBlocks) return
         val lv = p.skillLevel(Branch.WORKER_LUMBERJACK, 0)
-        if (lv < 1 || !event.block.type.name.contains("LOG") && !event.block.type.name.contains("STEM") && !event.block.type.name.contains("HYPHAE") && !event.block.type.name.contains("PLANKS")) return
-        p.addPotionEffect(PotionEffect(PotionEffectType.HASTE, 5 * 20, lv, false, true))
+        val amp = if (lv < 1) 0 else lv // lvl.0 = Haste I (amp 0), lvl.1+ = Haste II-IV
+        p.addPotionEffect(PotionEffect(PotionEffectType.HASTE, 5 * 20, amp, false, true))
+        // 巧力用斧 (强力运斧): prevent durability damage on next axe break
+        if (com.waterful.project.career.skill.SkillExecutor.onQiaoLiYongFuBreak(p)) {
+            val item = p.inventory.itemInMainHand
+            if (item is org.bukkit.inventory.meta.Damageable && item.type.name.contains("AXE")) {
+                val meta = item.itemMeta as org.bukkit.inventory.meta.Damageable
+                val oldDmg = meta.damage
+                org.bukkit.Bukkit.getScheduler().runTaskLater(
+                    org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe")!!,
+                    Runnable {
+                        val newMeta = item.itemMeta as org.bukkit.inventory.meta.Damageable
+                        newMeta.damage = oldDmg
+                        item.itemMeta = newMeta
+                    }, 1L)
+            }
+        }
     }
 
     // ===== WORKER_MINER skill 0 (奋力挖掘): haste on stone break =====
+
+    private val stoneBlocks = setOf(
+        Material.STONE, Material.DEEPSLATE, Material.GRANITE, Material.DIORITE, Material.ANDESITE,
+        Material.TUFF, Material.CALCITE, Material.DRIPSTONE_BLOCK, Material.POINTED_DRIPSTONE,
+        Material.SANDSTONE, Material.RED_SANDSTONE, Material.SMOOTH_SANDSTONE, Material.SMOOTH_RED_SANDSTONE,
+        Material.NETHERRACK, Material.BASALT, Material.BLACKSTONE, Material.END_STONE,
+        Material.COBBLESTONE, Material.COBBLED_DEEPSLATE,
+        Material.MOSSY_COBBLESTONE, Material.OBSIDIAN, Material.CRYING_OBSIDIAN,
+        // Ore variants
+        Material.COAL_ORE, Material.DEEPSLATE_COAL_ORE,
+        Material.COPPER_ORE, Material.DEEPSLATE_COPPER_ORE,
+        Material.IRON_ORE, Material.DEEPSLATE_IRON_ORE,
+        Material.GOLD_ORE, Material.DEEPSLATE_GOLD_ORE,
+        Material.DIAMOND_ORE, Material.DEEPSLATE_DIAMOND_ORE,
+        Material.EMERALD_ORE, Material.DEEPSLATE_EMERALD_ORE,
+        Material.LAPIS_ORE, Material.DEEPSLATE_LAPIS_ORE,
+        Material.REDSTONE_ORE, Material.DEEPSLATE_REDSTONE_ORE,
+        Material.NETHER_GOLD_ORE, Material.NETHER_QUARTZ_ORE,
+        Material.ANCIENT_DEBRIS, Material.GILDED_BLACKSTONE,
+        // Additional stone variants
+        Material.PRISMARINE, Material.DARK_PRISMARINE, Material.PRISMARINE_BRICKS,
+        Material.NETHER_BRICKS, Material.RED_NETHER_BRICKS,
+        Material.PURPUR_BLOCK, Material.PURPUR_PILLAR,
+        Material.BRICKS, Material.STONE_BRICKS, Material.MOSSY_STONE_BRICKS,
+        Material.CRACKED_STONE_BRICKS, Material.CHISELED_STONE_BRICKS,
+        Material.DEEPSLATE_BRICKS, Material.CRACKED_DEEPSLATE_BRICKS,
+        Material.DEEPSLATE_TILES, Material.CRACKED_DEEPSLATE_TILES,
+        Material.POLISHED_GRANITE, Material.POLISHED_DIORITE, Material.POLISHED_ANDESITE,
+        Material.POLISHED_DEEPSLATE, Material.POLISHED_BASALT,
+        Material.SMOOTH_BASALT, Material.SMOOTH_STONE,
+        Material.POLISHED_BLACKSTONE, Material.POLISHED_BLACKSTONE_BRICKS,
+        Material.CRACKED_POLISHED_BLACKSTONE_BRICKS,
+        Material.QUARTZ_BLOCK, Material.QUARTZ_BRICKS, Material.QUARTZ_PILLAR,
+        Material.SMOOTH_QUARTZ, Material.CHISELED_QUARTZ_BLOCK,
+        Material.AMETHYST_BLOCK, Material.BUDDING_AMETHYST,
+        Material.MAGMA_BLOCK, Material.GLOWSTONE,
+        Material.TERRACOTTA, Material.WHITE_TERRACOTTA
+    )
 
     @EventHandler
     fun onBreakStone(event: org.bukkit.event.block.BlockBreakEvent) {
         val p = event.player
         if (!p.hasBranch(Branch.WORKER_MINER)) return
+        if (event.block.type !in stoneBlocks) return
+        // Haste buff
         val lv = p.skillLevel(Branch.WORKER_MINER, 0)
-        if (lv < 1 || !event.block.type.name.contains("STONE") && !event.block.type.name.contains("ORE") && !event.block.type.name.contains("DEEPSLATE") && !event.block.type.name.contains("NETHERRACK")) return
-        p.addPotionEffect(PotionEffect(PotionEffectType.HASTE, 5 * 20, lv, false, true))
+        val amp = if (lv < 1) 0 else lv // lvl.0 = Haste I (amp 0), lvl.1+ = Haste II-IV
+        p.addPotionEffect(PotionEffect(PotionEffectType.HASTE, 5 * 20, amp, false, true))
+        // 强力运镐: prevent durability damage on next pickaxe break
+        if (com.waterful.project.career.skill.SkillExecutor.onQiangLiYunGaoBreak(p)) {
+            val item = p.inventory.itemInMainHand
+            if (item is org.bukkit.inventory.meta.Damageable && item.type.name.contains("PICKAXE")) {
+                val meta = item.itemMeta as org.bukkit.inventory.meta.Damageable
+                val oldDmg = meta.damage
+                org.bukkit.Bukkit.getScheduler().runTaskLater(
+                    org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe")!!,
+                    Runnable {
+                        val newMeta = item.itemMeta as org.bukkit.inventory.meta.Damageable
+                        newMeta.damage = oldDmg
+                        item.itemMeta = newMeta
+                    }, 1L)
+            }
+        }
     }
 
     // ===== WARRIOR_WEAPON skill 0 (以锋为御): sword damage reduction =====
@@ -642,6 +753,17 @@ class PassiveSkillListener : Listener {
     fun onExplorerJoin(event: org.bukkit.event.player.PlayerJoinEvent) { applyExplorerEffects(event.player) }
     @EventHandler
     fun onExplorerRespawn(event: org.bukkit.event.player.PlayerRespawnEvent) { applyExplorerEffects(event.player) }
+    @EventHandler
+    fun onExplorerMove(event: org.bukkit.event.player.PlayerMoveEvent) {
+        // Reapply speed buff if missing or about to expire (handles death, milk, eureka unlock while online)
+        val p = event.player
+        if (!p.hasBranch(Branch.WARRIOR_EXPLORER)) return
+        if (event.from.blockX == event.to?.blockX && event.from.blockZ == event.to?.blockZ) return
+        val existing = p.getPotionEffect(PotionEffectType.SPEED)
+        if (existing == null || existing.duration < 10 * 20) {
+            applyExplorerEffects(p)
+        }
+    }
 
     private fun applyExplorerEffects(p: Player) {
         if (!p.hasBranch(Branch.WARRIOR_EXPLORER)) return
@@ -752,5 +874,51 @@ class PassiveSkillListener : Listener {
         val lv = p.skillLevel(Branch.FARMER_FISHERMAN, 0)
         if (lv < 1) return
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.LUCK, 60 * 20, lv - 1, false, true))
+    }
+
+    // ===== 决战冲锋: custom damage bonus (vs-player) + shield silence =====
+
+    @EventHandler
+    fun onChargeAssaultDamage(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
+        val damager = event.damager as? Player ?: return
+        val bonus = SkillExecutor.getChargeAssaultBonus(damager)
+        if (bonus <= 0.0) return
+        // Damage bonus applies to all targets
+        event.damage = event.damage * (1.0 + bonus)
+        // Shield silence: extend shield cooldown for player victims blocking
+        val shieldBonus = SkillExecutor.getChargeAssaultShield(damager)
+        if (shieldBonus > 0.0 && event.entity is Player) {
+            val victim = event.entity as Player
+            if (victim.isBlocking) {
+                victim.setCooldown(Material.SHIELD, (100 + (100 * shieldBonus).toInt()).coerceAtMost(200))
+            }
+        }
+    }
+
+    // ===== 我即梦魇: custom monster damage bonus =====
+
+    @EventHandler
+    fun onNightmareDamage(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
+        val damager = event.damager as? Player ?: return
+        val bonus = SkillExecutor.getNightmareBonus(damager)
+        if (bonus <= 0.0) return
+        if (event.entity is org.bukkit.entity.Monster) {
+            event.damage = event.damage * (1.0 + bonus)
+        }
+    }
+
+    // ===== 我即梦魇: reapply aura on player move =====
+
+    @EventHandler
+    fun onNightmareMove(event: org.bukkit.event.player.PlayerMoveEvent) {
+        val p = event.player
+        if (event.from.blockX == event.to?.blockX && event.from.blockZ == event.to?.blockZ) return
+        SkillExecutor.reapplyNightmareAura(p)
+    }
+
+    /** 无畏突刺: 挥剑/斧时向前突进 (PlayerAnimationEvent covers both air swing and hit) */
+    @EventHandler
+    fun onFearlessThrustSwing(event: org.bukkit.event.player.PlayerAnimationEvent) {
+        com.waterful.project.career.skill.EurekaEffectHandler.onFearlessThrustSwing(event.player)
     }
 }

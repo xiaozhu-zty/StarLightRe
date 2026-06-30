@@ -52,7 +52,7 @@ object BindSkillSelectGUI {
     }
 
     fun handleClick(player: Player, slot: Int, inv: org.bukkit.inventory.Inventory, branch: Branch): Boolean {
-        if (slot == 22) { player.closeInventory(); BindBranchGUI.open(player, branch.careerClass, -1); return true }
+        if (slot == 22) { BindBranchGUI.open(player, branch.careerClass, -1); return true }
 
         val cp = CareerManager.getPlayer(player) ?: return true
 
@@ -67,7 +67,6 @@ object BindSkillSelectGUI {
                 val bindIndex = targetSlots[player.uniqueId] ?: return true
                 cp.hotkeyBinds[bindIndex] = "${branch.name}:$index"
                 player.sendMessage("§a✦ Shift+${bindIndex + 1} 绑定：${skill.skillDef.name}")
-                player.closeInventory()
                 BindGUI.open(player)
                 return true
             }
@@ -80,7 +79,6 @@ object BindSkillSelectGUI {
                 val bindIndex = targetSlots[player.uniqueId] ?: return true
                 cp.hotkeyBinds[bindIndex] = "eureka:${branch.name}"
                 player.sendMessage("§a✦ Shift+${bindIndex + 1} 绑定：§d${eureka.eurekaDef.name}")
-                player.closeInventory()
                 BindGUI.open(player)
                 return true
             }

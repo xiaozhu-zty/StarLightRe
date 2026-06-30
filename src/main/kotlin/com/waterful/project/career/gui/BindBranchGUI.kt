@@ -44,7 +44,6 @@ object BindBranchGUI {
 
     fun handleClick(player: Player, slot: Int, inv: org.bukkit.inventory.Inventory): Boolean {
         if (slot == 22) {
-            player.closeInventory()
             val (_, ts) = ctx[player.uniqueId] ?: return true
             BindClassGUI.open(player, ts)
             return true
@@ -60,7 +59,6 @@ object BindBranchGUI {
         val branches = Branch.fromCareerClass(careerClass).filter { cp.unlockedBranches.containsKey(it) }
         val branch = branches.getOrNull(idx) ?: return true
 
-        player.closeInventory()
         BindSkillSelectGUI.open(player, branch, targetSlot)
         return true
     }

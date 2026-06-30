@@ -88,7 +88,7 @@ object CareerGUI {
             slot in listOf(14, 23, 32, 41) -> {
                 val branch = getBranchForSlot(viewClass, slot, listOf(14, 23, 32, 41)) ?: return true
                 if (CareerManager.hasBranch(cp, branch)) {
-                    player.closeInventory(); BranchGUI.open(player, branch)
+                    BranchGUI.open(player, branch)
                 } else {
                     CareerManager.unlockBranch(player, branch); refresh(player)
                 }
@@ -114,7 +114,7 @@ object CareerGUI {
                 }
             }
             // Shortcut bind
-            slot == 37 -> { player.closeInventory(); BindGUI.open(player) }
+            slot == 37 -> { BindGUI.open(player) }
             // Scroll
             slot == 40 -> giveScroll(player)
         }
@@ -127,7 +127,7 @@ object CareerGUI {
         return Branch.fromCareerClass(viewClass).getOrNull(idx)
     }
 
-    private fun refresh(player: Player) { player.closeInventory(); open(player) }
+    private fun refresh(player: Player) { open(player) }
 
     // ===== Icons =====
 

@@ -83,6 +83,12 @@ class StarLightRe : JavaPlugin() {
         // Start fisherman passive effects tick (Luck + Conduit Power)
         startFishermanTick()
 
+        // Start kuangdeng (dynamic light) follow tick
+        startKuangDengTick()
+
+        // Start auto-release tick (fires auto-cast skills when cooldowns are ready)
+        startAutoReleaseTick()
+
         logger.info("✦ ${description.name} v${description.version} 已启用！")
         logger.info("✦ 生涯系统已加载：6职业 | 24分支 | 72技能 | 72顿悟")
     }
@@ -121,5 +127,42 @@ class StarLightRe : JavaPlugin() {
                 }
             }
         }, 20L, 20L)
+    }
+
+    private fun startKuangDengTick() {
+        server.scheduler.runTaskTimer(this, Runnable {
+            com.waterful.project.career.skill.SkillExecutor.tickKuangDeng()
+        }, 5L, 5L) // Every 5 ticks for smooth following
+    }
+
+    private fun startAutoReleaseTick() {
+        server.scheduler.runTaskTimer(this, Runnable {
+            for (player in server.onlinePlayers) {
+                val cp = com.waterful.project.career.manager.CareerManager.getPlayer(player) ?: continue
+                val now = System.currentTimeMillis()
+                for ((autoKey, enabled) in cp.autoCastSkills) {
+                    if (!enabled) continue
+                    if (!autoKey.endsWith("_auto")) continue
+                    // Parse branch and skill index from key: "WORKER_MINER_skill_1_auto"
+                    val parts = autoKey.removeSuffix("_auto").split("_")
+                    if (parts.size < 4) continue
+                    val branchName = parts[0] + "_" + parts[1]
+                    val skillIdx = parts.last().toIntOrNull() ?: continue
+                    val branch = com.waterful.project.career.model.Branch.entries.find { it.name == branchName } ?: continue
+                    val skill = cp.getSkill(branch, skillIdx) ?: continue
+                    if (skill.currentLevel < 1) continue
+                    val skillId = "${branch.name.lowercase()}_skill_$skillIdx"
+                    // Check cooldown (get cooldown for current level)
+                    val cdSeconds = skill.skillDef.getCooldown(skill.currentLevel)
+                    if (cdSeconds <= 0) continue
+                    if (cp.isOnCooldown(skillId, cdSeconds, now)) continue
+                    // Fire the skill silently (auto-release: no chat spam for next-op skills)
+                    val fired = com.waterful.project.career.skill.SkillExecutor.executeSkill(player, skill, silent = true)
+                    if (fired) {
+                        cp.setCooldown(skillId, now)
+                    }
+                }
+            }
+        }, 10L, 10L) // Every 10 ticks
     }
 }

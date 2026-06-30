@@ -37,12 +37,11 @@ object BindClassGUI {
     }
 
     fun handleClick(player: Player, slot: Int, inv: org.bukkit.inventory.Inventory): Boolean {
-        if (slot == 22) { player.closeInventory(); BindGUI.open(player); return true }
+        if (slot == 22) { BindGUI.open(player); return true }
         val slots = listOf(10, 11, 12, 13, 14, 15)
         val idx = slots.indexOf(slot)
         if (idx < 0) return true
         val clazz = CareerClass.entries.getOrNull(idx) ?: return true
-        player.closeInventory()
         BindBranchGUI.open(player, clazz, targetSlots[player.uniqueId] ?: 0)
         return true
     }

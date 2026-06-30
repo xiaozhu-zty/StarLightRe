@@ -180,6 +180,9 @@ object CareerManager {
         clearHotkeyBindsForBranch(cp, branch)
         if (cp.resonantBranch == branch) cp.resonantBranch = null
 
+        // Clear all active potion effects when forgetting a branch
+        player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
+
         player.sendMessage("§a✦ 已遗忘分支：${branch.displayName}（花费${cost}技能点）")
         return true
     }

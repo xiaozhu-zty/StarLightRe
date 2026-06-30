@@ -45,7 +45,7 @@ object EurekaGUI {
             11 -> { chooseEureka(player, branch, 0); return true }
             13 -> { chooseEureka(player, branch, 1); return true }
             15 -> { chooseEureka(player, branch, 2); return true }
-            22 -> { player.closeInventory(); BranchGUI.open(player, branch); return true }
+            22 -> { BranchGUI.open(player, branch); return true }
             26 -> { player.closeInventory(); return true }
         }
         return true
@@ -62,7 +62,6 @@ object EurekaGUI {
         }
 
         if (CareerManager.chooseEureka(player, branch, index)) {
-            player.closeInventory()
             BranchGUI.open(player, branch)
         }
     }

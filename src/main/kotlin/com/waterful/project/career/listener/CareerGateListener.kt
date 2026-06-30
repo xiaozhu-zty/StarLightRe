@@ -223,6 +223,48 @@ class CareerGateListener : Listener {
         event.isDropItems = false
     }
 
+    // ========== MINER GATING: 非矿工挖石头仅50%掉落 + 高级镐/斧限制 ==========
+
+    private val naturalStone = setOf(
+        Material.STONE, Material.DEEPSLATE, Material.GRANITE, Material.DIORITE, Material.ANDESITE,
+        Material.TUFF, Material.CALCITE, Material.DRIPSTONE_BLOCK, Material.POINTED_DRIPSTONE,
+        Material.SANDSTONE, Material.RED_SANDSTONE,
+        Material.NETHERRACK, Material.BASALT, Material.BLACKSTONE, Material.END_STONE,
+        Material.COBBLESTONE, Material.COBBLED_DEEPSLATE,
+        Material.MOSSY_COBBLESTONE, Material.OBSIDIAN, Material.CRYING_OBSIDIAN
+    )
+    private val highTierPickaxes = setOf(Material.DIAMOND_PICKAXE, Material.NETHERITE_PICKAXE)
+    private val highTierAxes = setOf(Material.DIAMOND_AXE, Material.NETHERITE_AXE)
+
+    @EventHandler(priority = EventPriority.LOW)
+    fun onBreakStone(event: org.bukkit.event.block.BlockBreakEvent) {
+        val p = event.player
+        val tool = p.inventory.itemInMainHand.type
+        val cp = CareerManager.getPlayer(p)
+
+        // Non-miner using diamond/netherite pickaxe → cannot break at all
+        if (tool in highTierPickaxes && cp?.let { CareerManager.hasBranch(it, Branch.WORKER_MINER) } != true) {
+            event.isCancelled = true
+            if (DebugManager.isListening(p.uniqueId))
+                p.sendMessage("§7[Debug] 非矿工无法使用高级镐破坏方块")
+            return
+        }
+
+        // Non-lumberjack using diamond/netherite axe → cannot break at all
+        if (tool in highTierAxes && cp?.let { CareerManager.hasBranch(it, Branch.WORKER_LUMBERJACK) } != true) {
+            event.isCancelled = true
+            if (DebugManager.isListening(p.uniqueId))
+                p.sendMessage("§7[Debug] 非伐木工无法使用高级斧破坏方块")
+            return
+        }
+
+        // Non-miner breaking natural stone → 50% drop
+        if (event.block.type in naturalStone && cp?.let { CareerManager.hasBranch(it, Branch.WORKER_MINER) } != true) {
+            if (DebugManager.rollChance(p, 50, "非矿工 — 石头掉落50%")) return
+            event.isDropItems = false
+        }
+    }
+
     // ========== REDSTONE PLACEMENT GATING ==========
 
     @EventHandler(priority = EventPriority.LOW)
@@ -295,6 +337,19 @@ class CareerGateListener : Listener {
         Material.LAVA_BUCKET, Material.BLAZE_ROD
     )
 
+    /** Track who placed fuel into each furnace (location -> player UUID) */
+    private val furnaceFuelPlacer = mutableMapOf<org.bukkit.Location, java.util.UUID>()
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    fun onFurnaceFuelPlace(event: org.bukkit.event.inventory.InventoryClickEvent) {
+        val inv = event.inventory
+        if (inv.type != org.bukkit.event.inventory.InventoryType.FURNACE && inv.type != org.bukkit.event.inventory.InventoryType.BLAST_FURNACE) return
+        if (event.slotType != org.bukkit.event.inventory.InventoryType.SlotType.FUEL) return
+        if (event.cursor?.type !in smelterGatedFuels) return
+        val player = event.whoClicked as? Player ?: return
+        furnaceFuelPlacer[inv.location!!] = player.uniqueId
+    }
+
     @EventHandler
     fun onFurnaceBurn(event: FurnaceBurnEvent) {
         if (event.block.type != Material.FURNACE && event.block.type != Material.BLAST_FURNACE) return
@@ -302,17 +357,28 @@ class CareerGateListener : Listener {
         if (fuel.type !in smelterGatedFuels) return
 
         val loc = event.block.location
+        // Check the player who placed this fuel
+        val placerUuid = furnaceFuelPlacer.remove(loc)
+        if (placerUuid != null) {
+            val placer = org.bukkit.Bukkit.getPlayer(placerUuid)
+            if (placer != null && placer.isOnline) {
+                val cp = CareerManager.getPlayer(placer)
+                if (cp != null && CareerManager.hasBranch(cp, Branch.WORKER_SMELTER)) {
+                    if (DebugManager.isListening(placer.uniqueId))
+                        placer.sendMessage(debugPass("烧炼师", fuel.type.name))
+                    return // Allowed: placer is a smelter
+                }
+                if (DebugManager.isListening(placer.uniqueId))
+                    placer.sendMessage(debugFail("烧炼师", fuel.type.name))
+            }
+        }
+
+        // If no valid smelter placer, cancel the burn
+        event.isCancelled = true
         val nearbyPlayers = loc.getNearbyPlayers(5.0)
         for (player in nearbyPlayers) {
-            val cp = CareerManager.getPlayer(player) ?: continue
-            val debug = DebugManager.isListening(player.uniqueId)
-            if (!CareerManager.hasBranch(cp, Branch.WORKER_SMELTER)) {
-                event.isCancelled = true
-                player.sendMessage(if (debug) debugFail("烧炼师", fuel.type.name) else gateMsg("烧炼师"))
-                return
-            } else {
-                if (debug) player.sendMessage(debugPass("烧炼师", fuel.type.name))
-            }
+            if (DebugManager.isListening(player.uniqueId))
+                player.sendMessage(debugFail("烧炼师", fuel.type.name))
         }
     }
 

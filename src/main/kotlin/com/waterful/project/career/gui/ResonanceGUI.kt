@@ -58,12 +58,10 @@ object ResonanceGUI {
             in modeMap -> {
                 val mode = modeMap[slot]!!
                 CareerManager.setResonanceMode(player, branch, mode)
-                player.closeInventory()
                 BranchGUI.open(player, branch)
                 return true
             }
             18 -> {
-                player.closeInventory()
                 BranchGUI.open(player, branch)
                 return true
             }

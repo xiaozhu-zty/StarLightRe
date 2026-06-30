@@ -58,12 +58,10 @@ object ClassGUI {
 
                 if (CareerManager.hasBranch(cp, branch)) {
                     // Open branch detail
-                    player.closeInventory()
                     BranchGUI.open(player, branch)
                 } else {
                     // Try to unlock
                     if (CareerManager.unlockBranch(player, branch)) {
-                        player.closeInventory()
                         ClassGUI.open(player, careerClass) // Refresh
                     }
                 }

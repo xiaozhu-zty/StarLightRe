@@ -13,7 +13,7 @@ object SkillExecutor {
     /**
      * Execute an active skill for a player
      */
-    fun executeSkill(player: Player, skill: SkillInstance): Boolean {
+    fun executeSkill(player: Player, skill: SkillInstance, silent: Boolean = false): Boolean {
         val cp = CareerManager.getPlayer(player) ?: return false
         val now = System.currentTimeMillis()
         val effectId = skill.skillDef.effectId
@@ -35,7 +35,7 @@ object SkillExecutor {
         }
 
         // Try built-in effect handler first
-        val handled = executeBuiltinEffect(player, skill, level)
+        val handled = executeBuiltinEffect(player, skill, level, silent)
         if (handled) {
             cp.setCooldown(effectId, now)
             return true
@@ -44,7 +44,7 @@ object SkillExecutor {
         // Get effect from registry
         val effect = SkillRegistry.getSkill(effectId)
         if (effect == null) {
-            player.sendMessage(
+            if (!silent) player.sendMessage(
                 Component.text("✦ 技能触发：${skill.skillDef.name} (Lv.$level)", NamedTextColor.YELLOW)
             )
         } else {
@@ -86,7 +86,7 @@ object SkillExecutor {
 
     // ===== Built-in active skill effects =====
 
-    private fun executeBuiltinEffect(player: Player, skill: SkillInstance, level: Int): Boolean {
+    private fun executeBuiltinEffect(player: Player, skill: SkillInstance, level: Int, silent: Boolean = false): Boolean {
         return when (skill.skillDef.effectId) {
             "architect_demolition_skill_1" -> executeQiLangXingZhe(player, skill, level)
             "architect_demolition_skill_2" -> executeQianYanBaoPo(player, skill, level)
@@ -98,9 +98,9 @@ object SkillExecutor {
             "chef_butcher_skill_2" -> executeKunShouTianDi(player, skill, level)
             "chef_baker_skill_2" -> executeTianDianPaiDui(player, skill, level)
             "chef_brewer_skill_1" -> executeZhengFaKongJian(player, skill, level)
-            "chef_brewer_skill_2" -> executeShenShangXianSu(player, skill, level)
-            "chef_master_skill_1" -> executeQiWeiYiZhen(player, skill, level)
-            "chef_master_skill_2" -> executeDuJinMeiZhuan(player, skill, level)
+            "chef_brewer_skill_2" -> executeShenShangXianSu(player, skill, level, silent)
+            "chef_master_skill_1" -> executeQiWeiYiZhen(player, skill, level, silent)
+            "chef_master_skill_2" -> executeDuJinMeiZhuan(player, skill, level, silent)
             "chef_baker_skill_1" -> executeWenHuoManDun(player, skill, level)
             "chef_butcher_skill_1" -> executeKaoRouZhuanJia(player, skill, level)
             "scholar_enchanter_skill_2" -> executeZhuShuGongCheng(player, skill, level)
@@ -110,7 +110,7 @@ object SkillExecutor {
             "scholar_admin_skill_2" -> executeZongHeBaoGao(player, skill, level)
             "scholar_redstone_skill_2" -> executeChaoZai(player, skill, level)
             "farmer_fisherman_skill_2" -> executeDaYangJuanGu(player, skill, level)
-            "farmer_fisherman_skill_1" -> executeShouHuoTaoSheng(player, skill, level)
+            "farmer_fisherman_skill_1" -> executeShouHuoTaoSheng(player, skill, level, silent)
             "farmer_merchant_skill_2" -> executeTePinBaoBiao(player, skill, level)
             "farmer_rancher_skill_2" -> executeMuYuanHuanGe(player, skill, level)
             "farmer_rancher_skill_1" -> executeSiLiaoTiaoPei(player, skill, level)
@@ -120,15 +120,15 @@ object SkillExecutor {
             "worker_miner_skill_2" -> executeBuMieKuangDeng(player, skill, level)
             "worker_lumberjack_skill_2" -> executeZhanJinZhiGu(player, skill, level)
             "worker_smelter_skill_2" -> executeRanLiaoGuanDao(player, skill, level)
-            "worker_lumberjack_skill_1" -> executeQiaoLiYongFu(player, skill, level)
-            "worker_miner_skill_1" -> executeQiangLiYunGao(player, skill, level)
+            "worker_lumberjack_skill_1" -> executeQiaoLiYongFu(player, skill, level, silent)
+            "worker_miner_skill_1" -> executeQiangLiYunGao(player, skill, level, silent)
             "worker_smelter_skill_1" -> executeRongJinMuJu(player, skill, level)
             "warrior_soldier_skill_1" -> executeYanTiJiDong(player, skill, level)
             "warrior_weapon_skill_2" -> executeQiBingTuXi(player, skill, level)
             "warrior_soldier_skill_2" -> executeJueZhanChongFeng(player, skill, level)
             "warrior_hunter_skill_1" -> executeYuXueQiangGong(player, skill, level)
-            "warrior_explorer_skill_1" -> executeTanSuoZheXingNang(player, skill, level)
-            "warrior_weapon_skill_1" -> executeXinHaoDan(player, skill, level)
+            "warrior_explorer_skill_1" -> executeTanSuoZheXingNang(player, skill, level, silent)
+            "warrior_weapon_skill_1" -> executeXinHaoDan(player, skill, level, silent)
             "warrior_hunter_skill_2" -> executeWoJiEMengYan(player, skill, level)
             "warrior_explorer_skill_2" -> executeQianJinYingDi(player, skill, level)
             else -> false
@@ -202,16 +202,45 @@ object SkillExecutor {
         return true
     }
 
-    /** 不灭矿灯: 动态光源 */
+    /** 不灭矿灯: 动态光源 + 夜视 */
+    data class KuangDengData(val entity: org.bukkit.entity.FallingBlock, val expiry: Long)
+    val kuangDengPlayers = mutableMapOf<java.util.UUID, KuangDengData>()
+
     private fun executeBuMieKuangDeng(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val duration = when (lv) { 1 -> 120; 2 -> 180; 3 -> 240; else -> 120 } * 20
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.NIGHT_VISION, duration, 0, false, true))
-        p.world.spawn(p.location, org.bukkit.entity.GlowItemFrame::class.java)?.apply {
-            // Use a light block approach: give the player a glowing effect
-            remove() // Clean up - the night vision potion is the real effect
-        }
-        p.sendMessage(Component.text("§a✦ 不灭矿灯：夜视效果，持续${duration/20}秒"))
+        // Clean up previous light if any
+        kuangDengPlayers.remove(p.uniqueId)?.entity?.remove()
+
+        val durationSec = when (lv) { 1 -> 120; 2 -> 180; 3 -> 240; else -> 120 }
+        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.NIGHT_VISION, durationSec * 20, 0, false, true))
+
+        // Spawn invisible falling block as dynamic light source (shroomlight = light level 15)
+        val lightBlock = p.world.spawnFallingBlock(p.location.add(0.0, 1.5, 0.0), org.bukkit.Material.SHROOMLIGHT.createBlockData())
+        lightBlock.isSilent = true
+        lightBlock.isInvulnerable = true
+        lightBlock.dropItem = false
+        lightBlock.velocity = org.bukkit.util.Vector(0, 0, 0)
+
+        kuangDengPlayers[p.uniqueId] = KuangDengData(lightBlock, System.currentTimeMillis() + durationSec * 1000L)
+        p.sendMessage(Component.text("§a✦ 不灭矿灯：夜视 + 动态光源，持续${durationSec}秒"))
         return true
+    }
+
+    /** Called each tick to teleport light blocks to follow players and clean up expired ones */
+    fun tickKuangDeng() {
+        val now = System.currentTimeMillis()
+        val expired = mutableListOf<java.util.UUID>()
+        for ((uuid, data) in kuangDengPlayers) {
+            val player = org.bukkit.Bukkit.getPlayer(uuid)
+            if (player == null || !player.isOnline || now > data.expiry) {
+                data.entity.remove()
+                expired.add(uuid)
+                continue
+            }
+            // Teleport light to follow player
+            data.entity.teleport(player.location.add(0.0, 1.5, 0.0))
+            data.entity.ticksLived = 1 // Prevent natural despawn
+        }
+        expired.forEach { kuangDengPlayers.remove(it) }
     }
 
     /** 斩尽桎梏: 力量效果 */
@@ -284,8 +313,8 @@ object SkillExecutor {
     }
 
     /** 收获涛声: 钓鱼额外获得 */
-    private fun executeShouHuoTaoSheng(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.sendMessage(Component.text("§a✦ 收获涛声：下次钓鱼将额外获得 ${lv} 条鱼！"))
+    private fun executeShouHuoTaoSheng(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
+        if (!silent) p.sendMessage(Component.text("§a✦ 收获涛声：下次钓鱼将额外获得 ${lv} 条鱼！"))
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.LUCK, 30 * 20, lv, false, true))
         return true
     }
@@ -328,13 +357,38 @@ object SkillExecutor {
         return count > 0
     }
 
-    /** 决战冲锋: 武器伤害+沉默盾牌 */
+    /** 决战冲锋: 伤害加成(非力量药水) + 速度III + 盾牌沉默 */
     private fun executeJueZhanChongFeng(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val duration = when (lv) { 1 -> 60; 2 -> 75; 3 -> 90; else -> 60 } * 20
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, 5 * 20, if (lv >= 3) 3 else 2, false, true))
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.STRENGTH, duration, lv - 1, false, true))
-        p.sendMessage(Component.text("§a✦ 决战冲锋：武器伤害+${(20+lv*10)}%，持续${duration/20}秒"))
+        val duration = when (lv) { 1 -> 60; 2 -> 75; 3 -> 90; else -> 60 }
+        val damageBonus = when (lv) { 1 -> 0.30; 2 -> 0.40; 3 -> 0.50; else -> 0.30 }
+        val shieldBonus = when (lv) { 1 -> 0.50; 2 -> 0.75; 3 -> 1.00; else -> 0.50 }
+        // Speed III for 5 seconds
+        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, 5 * 20, 2, false, true))
+        // Track custom damage bonus (not Strength potion!)
+        chargeAssaultPlayers[p.uniqueId] = ChargeAssaultData(
+            System.currentTimeMillis() + duration * 1000L,
+            damageBonus, shieldBonus
+        )
+        p.sendMessage(Component.text("§a✦ 决战冲锋：伤害+${(damageBonus*100).toInt()}%，盾牌沉默+${(shieldBonus*100).toInt()}%，持续${duration}秒"))
         return true
+    }
+
+    // 决战冲锋 active tracking
+    data class ChargeAssaultData(val expiry: Long, val damageMultiplier: Double, val shieldSilence: Double)
+    private val chargeAssaultPlayers = mutableMapOf<java.util.UUID, ChargeAssaultData>()
+
+    /** Get 决战冲锋 damage multiplier if active, or 0.0 */
+    fun getChargeAssaultBonus(player: Player): Double {
+        val data = chargeAssaultPlayers[player.uniqueId] ?: return 0.0
+        if (System.currentTimeMillis() > data.expiry) { chargeAssaultPlayers.remove(player.uniqueId); return 0.0 }
+        return data.damageMultiplier
+    }
+
+    /** Get 决战冲锋 shield silence multiplier if active, or 0.0 */
+    fun getChargeAssaultShield(player: Player): Double {
+        val data = chargeAssaultPlayers[player.uniqueId] ?: return 0.0
+        if (System.currentTimeMillis() > data.expiry) { chargeAssaultPlayers.remove(player.uniqueId); return 0.0 }
+        return data.shieldSilence
     }
 
     /** 浴血强攻: 力量效果(低血加成) */
@@ -346,21 +400,45 @@ object SkillExecutor {
         return true
     }
 
-    /** 探索者的行囊: 恢复生命/饥饿 */
-    private fun executeTanSuoZheXingNang(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val heal = when (lv) { 1 -> 8.0; 2 -> 12.0; 3 -> 16.0; else -> 8.0 }
-        p.health = (p.health + heal).coerceAtMost(p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0)
-        val foodItems = mapOf(1 to org.bukkit.Material.BREAD, 2 to org.bukkit.Material.COOKED_SALMON, 3 to org.bukkit.Material.PUMPKIN_PIE)
-        foodItems[lv]?.let { p.inventory.addItem(org.bukkit.inventory.ItemStack(it, 1)) }
-        p.sendMessage(Component.text("§a✦ 探索者的行囊：恢复 ${heal.toInt()} 生命值"))
+    /** 探索者的行囊: 若生命/饥饿不满则恢复，均满则获得迅捷 */
+    private fun executeTanSuoZheXingNang(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
+        val maxHp = p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0
+        val hpFull = p.health >= maxHp
+        val foodFull = p.foodLevel >= 20
+
+        if (hpFull && foodFull) {
+            // Both full → Speed buff
+            val (duration, amp) = when (lv) {
+                1 -> 60 to 1   // Speed II 60s
+                2 -> 75 to 1   // Speed II 75s
+                3 -> 75 to 2   // Speed III 75s
+                else -> 60 to 1
+            }
+            p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, duration * 20, amp, false, true))
+            if (!silent) p.sendMessage(Component.text("§a✦ 探索者的行囊：获得迅捷${if(amp >= 2) "III" else "II"} ${duration}秒"))
+            return true
+        }
+
+        val msgs = mutableListOf<String>()
+        if (!hpFull) {
+            val heal = when (lv) { 1 -> 8.0; 2 -> 12.0; 3 -> 16.0; else -> 8.0 }
+            p.health = (p.health + heal).coerceAtMost(maxHp)
+            msgs.add("恢复${heal.toInt()}生命值")
+        }
+        if (!foodFull) {
+            val foodItem = when (lv) { 1 -> org.bukkit.Material.BREAD; 2 -> org.bukkit.Material.COOKED_SALMON; 3 -> org.bukkit.Material.PUMPKIN_PIE; else -> org.bukkit.Material.BREAD }
+            p.inventory.addItem(org.bukkit.inventory.ItemStack(foodItem, 1))
+            msgs.add("获得${when(lv) {1 -> "面包"; 2 -> "熟鲑鱼"; 3 -> "南瓜派"; else -> "面包"}}")
+        }
+        if (!silent) p.sendMessage(Component.text("§a✦ 探索者的行囊：${msgs.joinToString("，")}"))
         return true
     }
 
     /** 信号弹: 下次光灵箭不消耗，发光延长+5/10/15秒 */
-    private fun executeXinHaoDan(p: Player, s: SkillInstance, lv: Int): Boolean {
+    private fun executeXinHaoDan(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
         // Store the signal flare level for the next spectral arrow shot
         signalFlarePlayers[p.uniqueId] = lv
-        p.sendMessage(Component.text("§a✦ 信号弹：下次光灵箭不消耗，目标发光时长+${5+lv*5}秒"))
+        if (!silent) p.sendMessage(Component.text("§a✦ 信号弹：下次光灵箭不消耗，目标发光时长+${5+lv*5}秒"))
         return true
     }
 
@@ -455,25 +533,25 @@ object SkillExecutor {
     }
 
     /** 肾上腺素: 喷溅治疗药水buff */
-    private fun executeShenShangXianSu(p: Player, s: SkillInstance, lv: Int): Boolean {
+    private fun executeShenShangXianSu(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
         val amp = lv - 1
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, 8 * 20, 0, false, true))
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION, (15 + lv * 5) * 20, lv - 1, false, true))
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION, (2 + lv) * 20, lv - 1, false, true))
-        p.sendMessage(Component.text("§a✦ 肾上腺素：下次喷溅治疗药水将附加Buff"))
+        if (!silent) p.sendMessage(Component.text("§a✦ 肾上腺素：下次喷溅治疗药水将附加Buff"))
         return true
     }
 
     /** 奇味异珍: 特殊食物效果 */
-    private fun executeQiWeiYiZhen(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.sendMessage(Component.text("§a✦ 奇味异珍：下次食用紫颂果/金胡萝卜/发光浆果/毒马铃薯触发特效"))
+    private fun executeQiWeiYiZhen(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
+        if (!silent) p.sendMessage(Component.text("§a✦ 奇味异珍：下次食用紫颂果/金胡萝卜/发光浆果/毒马铃薯触发特效"))
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.LUCK, 60 * 20, lv, false, true))
         return true
     }
 
     /** 镀金美馔: 金色食物分享 */
-    private fun executeDuJinMeiZhuan(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.sendMessage(Component.text("§a✦ 镀金美馔：下次食用金色食物时分享饱食效果"))
+    private fun executeDuJinMeiZhuan(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
+        if (!silent) p.sendMessage(Component.text("§a✦ 镀金美馔：下次食用金色食物时分享饱食效果"))
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SATURATION, 1 * 20, lv, false, true))
         return true
     }
@@ -602,16 +680,31 @@ object SkillExecutor {
         return true
     }
 
-    /** 巧力用斧: 下次不消耗耐久 */
-    private fun executeQiaoLiYongFu(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.sendMessage(Component.text("§a✦ 巧力用斧：下次用斧破坏木方块不消耗耐久"))
+    /** 巧力用斧: 下次用斧破坏木方块不消耗耐久 */
+    private val qiaoLiYongFuPlayers = mutableMapOf<java.util.UUID, Boolean>()
+
+    private fun executeQiaoLiYongFu(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
+        qiaoLiYongFuPlayers[p.uniqueId] = true
+        if (!silent) p.sendMessage(Component.text("§a✦ 巧力用斧：下次用斧破坏木方块不消耗耐久"))
         return true
     }
 
-    /** 强力运镐: 下次不消耗耐久 */
-    private fun executeQiangLiYunGao(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.sendMessage(Component.text("§a✦ 强力运镐：下次用镐破坏石方块不消耗耐久"))
+    /** Called from BlockBreakEvent — prevent durability damage if 巧力用斧 active */
+    fun onQiaoLiYongFuBreak(player: Player): Boolean = qiaoLiYongFuPlayers.remove(player.uniqueId) ?: false
+
+    /** 强力运镐: 下次用镐破坏石方块不消耗耐久 */
+    private val qiangLiYunGaoPlayers = mutableMapOf<java.util.UUID, Boolean>()
+
+    private fun executeQiangLiYunGao(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
+        qiangLiYunGaoPlayers[p.uniqueId] = true
+        if (!silent) p.sendMessage(Component.text("§a✦ 强力运镐：下次用镐破坏石方块不消耗耐久"))
         return true
+    }
+
+    /** Called from BlockBreakEvent — prevent durability damage if 强力运镐 active */
+    fun onQiangLiYunGaoBreak(player: Player): Boolean {
+        val has = qiangLiYunGaoPlayers.remove(player.uniqueId) ?: false
+        return has
     }
 
     /** 熔金模具: 高炉额外经验 */
@@ -621,11 +714,49 @@ object SkillExecutor {
         return true
     }
 
-    /** 我即梦魇: 额外伤害 */
+    /** 我即梦魇: 怪物发光+缓慢 + 伤害加成(非力量) */
+    private val nightmarePlayers = mutableMapOf<java.util.UUID, NightmareData>()
+    data class NightmareData(val expiry: Long, val monsterRange: Double, val monsterSlowness: Int, val damageBonus: Double)
+
     private fun executeWoJiEMengYan(p: Player, s: SkillInstance, lv: Int): Boolean {
+        val duration = when (lv) { 1 -> 60; 2 -> 75; 3 -> 90; else -> 60 }
+        val range = when (lv) { 1 -> 16.0; 2 -> 24.0; 3 -> 32.0; else -> 16.0 }
+        val slowness = if (lv >= 3) 1 else 0 // 缓慢I or 缓慢II
         val bonus = when (lv) { 1 -> 0.20; 2 -> 0.30; 3 -> 0.40; else -> 0.20 }
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.STRENGTH, 60 * 20, lv - 1, false, true))
-        p.sendMessage(Component.text("§a✦ 我即梦魇：伤害+${(bonus*100).toInt()}%，持续60秒"))
+        nightmarePlayers[p.uniqueId] = NightmareData(
+            System.currentTimeMillis() + duration * 1000L, range, slowness, bonus
+        )
+        // Immediately apply glow+slowness to nearby monsters
+        val count = applyNightmareAura(p, range, slowness, duration)
+        p.sendMessage(Component.text("§a✦ 我即梦魇：${count}只怪物被标记，对怪物伤害+${(bonus*100).toInt()}%，持续${duration}秒"))
+        return true
+    }
+
+    /** Apply nightmare aura to nearby monsters, returns count */
+    private fun applyNightmareAura(p: Player, range: Double, slowness: Int, durationSeconds: Int): Int {
+        var count = 0
+        for (entity in p.location.getNearbyEntities(range, range, range)) {
+            if (entity is org.bukkit.entity.Monster) {
+                entity.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.GLOWING, durationSeconds * 20, 0, false, true))
+                entity.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS, durationSeconds * 20, slowness, false, true))
+                count++
+            }
+        }
+        return count
+    }
+
+    /** Get 我即梦魇 damage bonus against monsters if active, or 0.0 */
+    fun getNightmareBonus(player: Player): Double {
+        val data = nightmarePlayers[player.uniqueId] ?: return 0.0
+        if (System.currentTimeMillis() > data.expiry) { nightmarePlayers.remove(player.uniqueId); return 0.0 }
+        return data.damageBonus
+    }
+
+    /** Reapply nightmare aura on move (called by PassiveSkillListener) */
+    fun reapplyNightmareAura(player: Player): Boolean {
+        val data = nightmarePlayers[player.uniqueId] ?: return false
+        if (System.currentTimeMillis() > data.expiry) { nightmarePlayers.remove(player.uniqueId); return false }
+        applyNightmareAura(player, data.monsterRange, data.monsterSlowness, ((data.expiry - System.currentTimeMillis()) / 1000L).toInt())
         return true
     }
 

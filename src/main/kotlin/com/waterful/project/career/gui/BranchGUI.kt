@@ -83,7 +83,7 @@ object BranchGUI {
 
         when (slot) {
             // Back
-            37 -> { player.closeInventory(); ClassGUI.open(player, branch.careerClass); return true }
+            37 -> { ClassGUI.open(player, branch.careerClass); return true }
 
             // Skill headers (click to upgrade or bind)
             12 -> handleSkillClick(player, cp, branch, 0, isShift)
@@ -108,16 +108,17 @@ object BranchGUI {
 
     private fun handleSkillClick(player: Player, cp: CareerPlayer, branch: Branch, index: Int, isShift: Boolean) {
         val skill = cp.getSkill(branch, index) ?: return
-        if (isShift && !skill.skillDef.bindable && skill.currentLevel > 0) {
-            // Toggle auto-cast for non-bindable skills
+        val canAutoRelease = skill.currentLevel > 0 && skill.skillDef.getCooldown(skill.currentLevel) > 0
+        if (isShift && canAutoRelease) {
+            // Toggle auto-cast for any skill with CD (Shift+Click)
             val autoKey = "${branch.name}_skill_${index}_auto"
             val current = cp.autoCastSkills[autoKey] ?: false
             cp.autoCastSkills[autoKey] = !current
             player.sendMessage("§6${skill.skillDef.name} 自动释放：${if (!current) "§aON" else "§cOFF"}")
-            player.closeInventory(); open(player, branch)
+            open(player, branch)
             return
         }
-        if (isShift && skill.skillDef.bindable && skill.skillDef.skillType == SkillType.ACTIVE && skill.currentLevel > 0) {
+        if (isShift && !canAutoRelease && skill.skillDef.skillType == SkillType.ACTIVE && skill.currentLevel > 0) {
             player.closeInventory()
             player.sendMessage("§6请在热键绑定面板 (Shift+2) 中管理快捷键")
             return
@@ -125,7 +126,7 @@ object BranchGUI {
         if (skill.isMaxed) { player.sendMessage("§c该技能已满级！"); return }
         if (!SkillPointManager.hasEnough(cp, 1)) { player.sendMessage("§c技能点不足！"); return }
         CareerManager.levelUpSkill(player, branch, index)
-        player.closeInventory(); open(player, branch) // Refresh
+        open(player, branch) // Refresh
     }
 
     private fun handleSkillLevelClick(player: Player, cp: CareerPlayer, branch: Branch, skillIndex: Int, slot: Int) {
@@ -141,14 +142,14 @@ object BranchGUI {
     private fun handleEurekaGuideClick(player: Player, cp: CareerPlayer, branch: Branch) {
         if (cp.chosenEurekas.containsKey(branch)) { player.sendMessage("§c该分支已选择过顿悟！"); return }
         if (!cp.isBranchMaxed(branch)) { player.sendMessage("§c需要所有技能满级才能解锁顿悟！"); return }
-        player.closeInventory(); EurekaGUI.open(player, branch)
+        EurekaGUI.open(player, branch)
     }
 
     private fun handleEurekaChooseClick(player: Player, cp: CareerPlayer, branch: Branch, index: Int) {
         if (cp.chosenEurekas.containsKey(branch)) { player.sendMessage("§c该分支已选择过顿悟！"); return }
         if (!cp.isBranchMaxed(branch)) { player.sendMessage("§c需要所有技能满级才能解锁顿悟！"); return }
         CareerManager.chooseEureka(player, branch, index)
-        player.closeInventory(); open(player, branch)
+        open(player, branch)
     }
 
     // ===== Icon Builders =====
@@ -183,10 +184,10 @@ object BranchGUI {
             it.displayName(Component.text("${skill.skillDef.name} [$type]", if (skill.skillDef.skillType == SkillType.PASSIVE) NamedTextColor.AQUA else NamedTextColor.GOLD))
             val desc = mutableListOf<Component>()
             desc.add(Component.text("等级：Lv.${skill.currentLevel}/3", NamedTextColor.YELLOW))
-            if (!skill.skillDef.bindable && skill.currentLevel > 0) {
+            if (skill.skillDef.getCooldown(skill.currentLevel) > 0 && skill.currentLevel > 0) {
                 val autoKey = "${skill.skillDef.branch.name}_skill_${index}_auto"
                 val isAuto = cp?.autoCastSkills?.get(autoKey) ?: false
-                desc.add(Component.text("自动释放：${if (isAuto) "§aON" else "§cOFF"}", NamedTextColor.GRAY))
+                desc.add(Component.text("自动释放：${if (isAuto) "§aON" else "§cOFF"} (Shift+点击切换)", NamedTextColor.GRAY))
                 desc.add(Component.text("Shift+点击切换", NamedTextColor.DARK_GRAY, TextDecoration.ITALIC))
                 desc.add(Component.text(""))
             } else {

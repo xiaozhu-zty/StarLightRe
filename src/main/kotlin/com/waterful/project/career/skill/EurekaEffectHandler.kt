@@ -16,6 +16,21 @@ import org.bukkit.inventory.ItemStack
 object EurekaEffectHandler {
 
     fun execute(eurekaId: String, player: Player): Boolean {
+        // Check cooldown
+        val cp = CareerManager.getPlayer(player)
+        if (cp != null) {
+            val def = com.waterful.project.career.data.CareerDataLoader.getEureka(eurekaId)
+            if (def != null && def.cooldownSeconds > 0) {
+                val now = System.currentTimeMillis()
+                if (cp.isOnCooldown(eurekaId, def.cooldownSeconds, now)) {
+                    val remaining = cp.getRemainingCooldown(eurekaId, def.cooldownSeconds, now)
+                    player.sendMessage(Component.text("顿悟冷却中！剩余 ${remaining} 秒", NamedTextColor.RED))
+                    return false
+                }
+                cp.setCooldown(eurekaId, now)
+            }
+        }
+
         return try {
             when (eurekaId) {
                 "scholar_enchanter_eureka_1" -> openEnchantingTable(player)
@@ -35,13 +50,70 @@ object EurekaEffectHandler {
                 "worker_miner_eureka_2" -> locateOres(player)
                 "scholar_redstone_eureka_1" -> targetedPulse(player)
                 "scholar_redstone_eureka_0" -> redstoneTorchConvert(player)
-                else -> return false
+                "warrior_soldier_eureka_1" -> applyFearlessThrust(player)
+                "warrior_hunter_eureka_2" -> applyHolySpring(player)
+                else -> {
+                    player.sendMessage(Component.text("该顿悟无需主动触发", NamedTextColor.GRAY))
+                    return false
+                }
             }
             true
         } catch (e: Exception) {
             player.sendMessage(Component.text("顿悟执行出错: ${e.message}", NamedTextColor.RED))
             false
         }
+    }
+
+    // ===== 无畏突刺: 60秒内挥剑/斧向前突进 =====
+    private val fearlessThrustPlayers = mutableMapOf<java.util.UUID, Long>()
+    private val fearlessThrustLastDash = mutableMapOf<java.util.UUID, Long>()
+
+    private fun applyFearlessThrust(player: Player) {
+        fearlessThrustPlayers[player.uniqueId] = System.currentTimeMillis() + 60_000L
+        player.sendMessage(Component.text("§5✦ 无畏突刺：持续60秒，手持剑/斧挥动后向前突进"))
+    }
+
+    /** Called on arm swing — dash if 无畏突刺 active (works on both air swing and hit) */
+    fun onFearlessThrustSwing(player: Player) {
+        val expiry = fearlessThrustPlayers[player.uniqueId] ?: return
+        if (System.currentTimeMillis() > expiry) { fearlessThrustPlayers.remove(player.uniqueId); return }
+        // Anti-spam: max one dash per 400ms
+        val last = fearlessThrustLastDash[player.uniqueId] ?: 0L
+        if (System.currentTimeMillis() - last < 400) return
+        val held = player.inventory.itemInMainHand
+        if (!held.type.name.contains("SWORD") && !held.type.name.contains("AXE")) return
+        fearlessThrustLastDash[player.uniqueId] = System.currentTimeMillis()
+        val dir = player.location.direction.normalize()
+        player.velocity = dir.multiply(2.8).setY(0.25)
+    }
+
+    // ===== 圣洁泉源: 清除周围4格内所有玩家负面效果 =====
+    private fun applyHolySpring(player: Player) {
+        var count = 0
+        for (entity in player.location.getNearbyEntities(4.0, 4.0, 4.0)) {
+            if (entity is Player) {
+                // Remove negative potion effects (bad effects)
+                val negativeEffects = listOf(
+                    org.bukkit.potion.PotionEffectType.POISON, org.bukkit.potion.PotionEffectType.WITHER,
+                    org.bukkit.potion.PotionEffectType.WEAKNESS, org.bukkit.potion.PotionEffectType.SLOWNESS,
+                    org.bukkit.potion.PotionEffectType.MINING_FATIGUE, org.bukkit.potion.PotionEffectType.BLINDNESS,
+                    org.bukkit.potion.PotionEffectType.NAUSEA, org.bukkit.potion.PotionEffectType.HUNGER,
+                    org.bukkit.potion.PotionEffectType.INSTANT_DAMAGE, org.bukkit.potion.PotionEffectType.UNLUCK,
+                    org.bukkit.potion.PotionEffectType.DARKNESS, org.bukkit.potion.PotionEffectType.LEVITATION,
+                    org.bukkit.potion.PotionEffectType.BAD_OMEN, org.bukkit.potion.PotionEffectType.RAID_OMEN,
+                    org.bukkit.potion.PotionEffectType.TRIAL_OMEN, org.bukkit.potion.PotionEffectType.WIND_CHARGED,
+                    org.bukkit.potion.PotionEffectType.WEAVING, org.bukkit.potion.PotionEffectType.OOZING,
+                    org.bukkit.potion.PotionEffectType.INFESTED
+                )
+                for (effect in negativeEffects) {
+                    if (entity.hasPotionEffect(effect)) {
+                        entity.removePotionEffect(effect)
+                        count++
+                    }
+                }
+            }
+        }
+        player.sendMessage(Component.text("§5✦ 圣洁泉源：清除了${count}个负面效果"))
     }
 
     // ===== Implementations =====

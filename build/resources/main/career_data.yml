@@ -818,7 +818,7 @@ careers:
             name: "强力运镐"
             type: ACTIVE
             icon: "STONE_PICKAXE"
-            cooldown: [10, 10, 10]
+            cooldown: [10, 8, 6]
             levels:
               - "下次使用镐破坏自然石方块时不消耗耐久"
               - "（同上）"
@@ -827,7 +827,7 @@ careers:
             name: "不灭矿灯"
             type: ACTIVE
             icon: "TORCH"
-            cooldown: [900, 900, 900]
+            cooldown: [600, 540, 480]
             levels:
               - "持续120秒。获得一个光照强度为9的跟随自身的动态光源"
               - "持续180秒。获得一个光照强度为12的跟随自身的动态光源；此技能的CD-60"
@@ -997,9 +997,9 @@ careers:
             type: PASSIVE
             icon: "SHIELD"
             levels:
-              - "+20%"
-              - "+30%"
-              - "+40%"
+              - "对玩家造成的伤害+20%"
+              - "对玩家造成的伤害+30%"
+              - "对玩家造成的伤害+40%"
           - id: "warrior_soldier_skill_1"
             name: "掩体机动"
             type: ACTIVE
@@ -1013,11 +1013,11 @@ careers:
             name: "决战冲锋"
             type: ACTIVE
             icon: "DIAMOND_CHESTPLATE"
-            cooldown: [360, 360, 360]
+            cooldown: [600, 600, 600]
             levels:
               - "持续60秒。获得5秒速度III；期间使用剑、斧、弓造成的伤害+30%；剑、斧、弓对盾牌的沉默时长+50%"
               - "持续75秒。获得5秒速度III；期间使用剑、斧、弓造成的伤害+40%；剑、斧、弓对盾牌的沉默时长+75%"
-              - "持续90秒。获得5秒速度IV；期间使用剑、斧、弓造成的伤害+50%；剑、斧、弓对盾牌的沉默时长+100%"
+              - "持续90秒。获得5秒速度III；期间使用剑、斧、弓造成的伤害+50%；剑、斧、弓对盾牌的沉默时长+100%"
         eurekas:
           - id: "warrior_soldier_eureka_0"
             name: "游击战"
@@ -1026,8 +1026,9 @@ careers:
             description: "受到来自玩家的伤害后立即清除自身的发光效果，并获得3秒速度II"
           - id: "warrior_soldier_eureka_1"
             name: "无畏突刺"
+            type: ACTIVE
             icon: "IRON_SWORD"
-            cooldown: 0
+            cooldown: 60
             description: "持续60秒。期间手持剑或斧进行攻击后，立即向前位移一段距离"
           - id: "warrior_soldier_eureka_2"
             name: "集群突击"
@@ -1042,14 +1043,14 @@ careers:
             type: PASSIVE
             icon: "BOW"
             levels:
-              - "+40%"
-              - "+50%"
-              - "+60%"
+              - "对怪物造成的伤害+40%"
+              - "对怪物造成的伤害+50%"
+              - "对怪物造成的伤害+60%"
           - id: "warrior_hunter_skill_1"
             name: "浴血强攻"
             type: ACTIVE
             icon: "IRON_AXE"
-            cooldown: [45, 45, 45]
+            cooldown: [30, 30, 30]
             levels:
               - "获得10秒的力量I效果；若生命值不高于10，则变为10秒力量II效果"
               - "获得12秒的力量I效果；若生命值不高于10，则变为12秒力量III效果"
@@ -1058,11 +1059,11 @@ careers:
             name: "我即梦魇"
             type: ACTIVE
             icon: "WITHER_SKELETON_SKULL"
-            cooldown: [300, 300, 300]
+            cooldown: [600, 600, 600]
             levels:
-              - "+20%（与除魅使命加算）"
-              - "+30%"
-              - "+40%"
+              - "持续60秒。使周围16格内所有怪物发光并赋予缓慢I，对怪物造成的伤害+20%（与除魅使命加算）"
+              - "持续75秒。使周围24格内所有怪物发光并赋予缓慢I，对怪物造成的伤害+30%"
+              - "持续90秒。使周围32格内所有怪物发光并赋予缓慢II，对怪物造成的伤害+40%"
         eurekas:
           - id: "warrior_hunter_eureka_0"
             name: "斩首"
@@ -1078,7 +1079,7 @@ careers:
             name: "圣洁泉源"
             type: ACTIVE
             icon: "GLOWSTONE"
-            cooldown: 0
+            cooldown: 60
             description: "清除周围4格内所有玩家的负面效果"
       # --- 探险家 ---
       WARRIOR_EXPLORER:
@@ -1088,14 +1089,14 @@ careers:
             type: PASSIVE
             icon: "COMPASS"
             levels:
-              - "获得0.3的体力修正，但不再能放置驻扎信标"
-              - "获得0.7的体力修正"
-              - "获得0.6的体力修正"
+              - "体力修正0.7"
+              - "体力修正0.6"
+              - "体力修正0.5"
           - id: "warrior_explorer_skill_1"
             name: "探索者的行囊"
             type: ACTIVE
             icon: "BUNDLE"
-            cooldown: [120, 120, 120]
+            cooldown: [240, 240, 240]
             levels:
               - "若生命值不为满：恢复8生命值；若饥饿值不为满：获得1个面包；（两者可同时触发）若两者均为满：获得60秒迅捷II"
               - "若生命值不为满：恢复12生命值；若饥饿值不为满：获得1个熟鲑鱼；若两者均为满：获得75秒迅捷II"
@@ -1104,7 +1105,6 @@ careers:
             name: "前进营地"
             type: PASSIVE
             icon: "CAMPFIRE"
-            cooldown: [300, 300, 300]
             levels:
               - "放置的驻扎信标恢复光环+10%"
               - "放置的驻扎信标恢复光环+20%"
@@ -1114,14 +1114,14 @@ careers:
             name: "山海一过"
             icon: "DIAMOND_BOOTS"
             cooldown: 0
-            description: "始终获得迅捷II效果"
+            description: "体力修正0.3，但不能再放置驻扎信标"
           - id: "warrior_explorer_eureka_1"
             name: "奔赴新边疆"
             icon: "MAP"
             cooldown: 0
-            description: "若位于平原生物群系，为6格内生物提供再生II效果"
+            description: "始终获得迅捷II效果"
           - id: "warrior_explorer_eureka_2"
             name: "旷野互助"
             icon: "TOTEM_OF_UNDYING"
             cooldown: 0
-            description: "（特殊效果：聚落相关的扩展功能）"
+            description: "位于平原生物群系时，为6格内生物提供再生II效果"

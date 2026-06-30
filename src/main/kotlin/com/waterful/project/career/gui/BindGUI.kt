@@ -78,7 +78,6 @@ object BindGUI {
             val cp = CareerManager.getPlayer(player) ?: return true
             cp.scrollMode = !cp.scrollMode
             player.sendMessage("§6⚡ 切换为：${if (cp.scrollMode) "卷轴模式" else "Shift模式"}")
-            player.closeInventory()
             open(player)
             return true
         }
@@ -99,7 +98,6 @@ object BindGUI {
         }
 
         // Open multi-level bind GUI
-        player.closeInventory()
         BindClassGUI.open(player, bindIndex)
         return true
     }
