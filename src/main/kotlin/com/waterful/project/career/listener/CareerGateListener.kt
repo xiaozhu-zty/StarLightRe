@@ -1,7 +1,7 @@
 package com.waterful.project.career.listener
 
+import com.waterful.project.career.*
 import com.waterful.project.career.CareerItems
-import com.waterful.project.career.hasEureka
 import com.waterful.project.career.manager.CareerManager
 import com.waterful.project.career.manager.DebugManager
 import com.waterful.project.career.model.Branch
@@ -717,11 +717,40 @@ class CareerGateListener : Listener {
         // Breeding — 牧场主得4经验
         if (isBreedingItem(entity.type, held.type)) {
             if (!checkRancherGate(player, "繁殖")) event.isCancelled = true
-            else {
+            else if (entity.canBreed()) {
+                // Only trigger if animal can actually breed (not in cooldown)
                 player.giveExp(4)
-                // 饲料调配: next feeding → baby grows instantly
+                // 饲料调配 (Skill 1): next feeding → baby grows instantly
                 if (entity is org.bukkit.entity.Ageable) {
                     com.waterful.project.career.skill.SkillExecutor.onSiLiaoTiaoPeiFeed(player, entity)
+                }
+                // 动物育种 (Skill 0): spawn egg chance on feeding — 0.5%/1%/2%
+                val breedLv = player.skillLevel(Branch.FARMER_RANCHER, 0)
+                if (breedLv >= 1) {
+                    val gotEgg = when (breedLv) {
+                        1 -> DebugManager.rollChanceFraction(player, 1, 200, "动物育种·Lv.1 刷怪蛋(0.5%)")
+                        2 -> DebugManager.rollChanceFraction(player, 1, 100, "动物育种·Lv.2 刷怪蛋(1%)")
+                        3 -> DebugManager.rollChanceFraction(player, 2, 100, "动物育种·Lv.3 刷怪蛋(2%)")
+                        else -> false
+                    }
+                    if (gotEgg) {
+                        val eggMat = when (entity.type) {
+                            EntityType.COW -> Material.COW_SPAWN_EGG
+                            EntityType.PIG -> Material.PIG_SPAWN_EGG
+                            EntityType.SHEEP -> Material.SHEEP_SPAWN_EGG
+                            EntityType.CHICKEN -> Material.CHICKEN_SPAWN_EGG
+                            EntityType.RABBIT -> Material.RABBIT_SPAWN_EGG
+                            EntityType.GOAT -> Material.GOAT_SPAWN_EGG
+                            EntityType.HOGLIN -> Material.HOGLIN_SPAWN_EGG
+                            EntityType.MOOSHROOM -> Material.MOOSHROOM_SPAWN_EGG
+                            else -> null
+                        }
+                        eggMat?.let { mat ->
+                            entity.world.dropItemNaturally(entity.location, org.bukkit.inventory.ItemStack(mat, 1))
+                            if (DebugManager.isListening(player.uniqueId))
+                                player.sendMessage("§7[Debug] 动物育种：获得${mat.name}")
+                        }
+                    }
                 }
             }
             return

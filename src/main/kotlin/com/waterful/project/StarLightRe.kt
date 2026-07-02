@@ -53,6 +53,7 @@ class StarLightRe : JavaPlugin() {
         CareerDataLoader.init(this)
         RecipeManager.init(this)
         SkillRegistry.init()
+        com.waterful.project.career.skill.QTEProvider.init(this)
         ResonanceManager.init(configManager, this)
 
         // Register commands
