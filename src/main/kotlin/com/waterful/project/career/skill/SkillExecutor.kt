@@ -218,20 +218,29 @@ object SkillExecutor {
         if (blockUnder != org.bukkit.Material.SCAFFOLDING) return true // Not on scaffolding
 
         // Apply enhanced scaffolding effects (short duration, refreshed each tick)
-        val amp = when (lv) { 1 -> 1; 2 -> 1; 3 -> 2; else -> 1 } // speed II/II/III
-        val jumpAmp = lv - 1  // jump I/II/III
-        val resistAmp = lv - 1 // resist I/II/III
-        player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, 4 * 20, amp, false, true))
+        // Lv.1: speed II, jump I, resist I  |  Lv.2: speed II, jump II, resist II  |  Lv.3: speed III, jump III, resist III
+        val (speedAmp, jumpAmp, resistAmp) = when (lv) {
+            1 -> Triple(1, 0, 0)
+            2 -> Triple(1, 1, 1)
+            3 -> Triple(2, 2, 2)
+            else -> Triple(1, 0, 0)
+        }
+        player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, 4 * 20, speedAmp, false, true))
         player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.JUMP_BOOST, 4 * 20, jumpAmp, false, true))
         player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE, 4 * 20, resistAmp, false, true))
         return true
     }
 
-    /** 追加动力: 运输工具速度 */
+    /** 追加动力: boost vehicle speed by 30/40/50% */
     private fun executeZhuiJiaDongLi(p: Player, s: SkillInstance, lv: Int): Boolean {
+        if (!p.isInsideVehicle) {
+            p.sendMessage(Component.text("§c追加动力：需要乘坐载具！"))
+            return false
+        }
+        val vehicle = p.vehicle ?: return false
         val boost = when (lv) { 1 -> 0.30; 2 -> 0.40; 3 -> 0.50; else -> 0.30 }
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, 5 * 20, (lv * 2) - 1, false, true))
-        p.sendMessage(Component.text("§a✦ 追加动力：运输工具速度 +${(boost*100).toInt()}%，持续5秒"))
+        vehicle.velocity = vehicle.velocity.multiply(1.0 + boost * 7)
+        p.sendMessage(Component.text("§a✦ 追加动力：载具速度 +${(boost*100).toInt()}%，持续5秒"))
         return true
     }
 
@@ -624,15 +633,31 @@ object SkillExecutor {
 
     // ===== Remaining active skill implementations =====
 
-    /** 备用载具: 召唤船只 */
+    /** 备用载具: 水中召唤随机材质船 / Lv.2+铁轨上召唤矿车 */
     private fun executeBeiYongZaiJu(p: Player, s: SkillInstance, lv: Int): Boolean {
-        if (!p.location.block.type.name.contains("WATER") && p.location.block.type != org.bukkit.Material.WATER) {
-            p.sendMessage(Component.text("§c需要在水中使用！")); return false
+        val loc = p.location
+        val waterNearby = (-2..2).any { x -> (-2..2).any { z ->
+            val block = loc.clone().add(x.toDouble(), 0.0, z.toDouble()).block
+            block.type == org.bukkit.Material.WATER || block.type.name.contains("ICE") || block.type == org.bukkit.Material.FROSTED_ICE
+        }}
+        if (waterNearby) {
+            val boat = p.world.spawn(loc.add(0.0, 1.0, 0.0), org.bukkit.entity.Boat::class.java)
+            boat.boatType = org.bukkit.entity.Boat.Type.entries.toTypedArray().random()
+            p.sendMessage(Component.text("§a✦ 备用载具：召唤了一艘船"))
+            return true
         }
-        val boatType = org.bukkit.entity.EntityType.OAK_BOAT
-        p.world.spawn(p.location, org.bukkit.entity.Boat::class.java)
-        p.sendMessage(Component.text("§a✦ 备用载具：召唤了一艘船"))
-        return true
+        val railNearby = (-2..2).any { x -> (-2..2).any { z ->
+            val block = loc.clone().add(x.toDouble(), 0.0, z.toDouble()).block
+            block.type == org.bukkit.Material.RAIL || block.type == org.bukkit.Material.POWERED_RAIL ||
+                block.type == org.bukkit.Material.DETECTOR_RAIL || block.type == org.bukkit.Material.ACTIVATOR_RAIL
+        }}
+        if (lv >= 2 && railNearby) {
+            p.world.spawn(loc, org.bukkit.entity.Minecart::class.java)
+            p.sendMessage(Component.text("§a✦ 备用载具：召唤了一辆矿车"))
+            return true
+        }
+        p.sendMessage(Component.text("§c备用载具：周围没有水域或铁轨！"))
+        return false
     }
 
     /** 庇护寻求: 伤害减免 */

@@ -1300,6 +1300,9 @@ class PassiveSkillListener : Listener {
     //   Lv.3: TRASH=HARD, FISH=HARD, TREASURE=CHAOS
     //   Type: Lv.2=TWO_TIMES, Lv.3=THREE_TIMES (extra chances)
 
+    /** QTE fishing state: UUID -> (null = QTE pending, item = QTE done ready to deliver) */
+    private val qteing = mutableMapOf<java.util.UUID, org.bukkit.inventory.ItemStack?>()
+
     /** Daily per-chunk fish limit data: chunkKey -> (day, amount) */
     private val chunkFishData = mutableMapOf<Long, Pair<Int, Int>>()
 
@@ -1308,20 +1311,70 @@ class PassiveSkillListener : Listener {
     @EventHandler
     fun onFish(event: org.bukkit.event.player.PlayerFishEvent) {
         val p = event.player
-        if (!p.hasBranch(Branch.FARMER_FISHERMAN)) return
-        val lv = p.skillLevel(Branch.FARMER_FISHERMAN, 0)
+        val uuid = p.uniqueId
+        val hook = event.hook
 
+        // QTE applies to ALL players. Fishermen get easier difficulty + extras.
+        val isFisherman = p.hasBranch(Branch.FARMER_FISHERMAN)
+        val lv = if (isFisherman) p.skillLevel(Branch.FARMER_FISHERMAN, 0) else 0
+
+        // ===== TOP: QTE intercept — runs BEFORE state check, handles ALL states =====
+        if (qteing.containsKey(uuid)) {
+            val qteItem = qteing[uuid]
+            if (qteItem == null) {
+                // QTE still pending — block all fishing interaction
+                event.isCancelled = true
+                return
+            }
+            // QTE done, deliver the item on this reel-in
+            qteing.remove(uuid)
+
+            var finalItem = qteItem
+
+            // Fisherman bonuses: daily limit, 收获涛声, 授人以渔
+            if (isFisherman) {
+                val chunk = hook.location.chunk
+                val ck = chunkKey(chunk.x, chunk.z)
+                val todayQ = java.time.LocalDate.now().dayOfMonth
+                val (lastDayQ, amountQ) = chunkFishData[ck] ?: (-1 to 0)
+                val dailyAmount = if (lastDayQ == todayQ) amountQ else 0
+                chunkFishData[ck] = todayQ to (dailyAmount + 1)
+
+                if (dailyAmount >= 11) {
+                    p.sendMessage("§b繁星工坊 §7>> 这个区块的鱼钓光啦，明天再来吧？")
+                    finalItem = org.bukkit.inventory.ItemStack(FishingRarity.TRASH.types.random())
+                }
+
+                val taoShengLv = com.waterful.project.career.skill.SkillExecutor.onShouHuoTaoShengCatch(p)
+                if (taoShengLv > 0 && FishingRarity.getRarity(finalItem) == FishingRarity.FISH) {
+                    val bonus = if (taoShengLv == 3 && Math.random() <= 0.5) 2 else 1
+                    finalItem.amount += bonus
+                    p.sendMessage("§a✦ 收获涛声：额外获得 ${bonus} 条鱼！")
+                }
+
+                var exp = (1 + Math.random() * 6).toInt()
+                if (p.hasEureka(Branch.FARMER_FISHERMAN, 1)) exp += 6
+                if (FishingRarity.getRarity(finalItem) == FishingRarity.TRASH) exp /= 2
+                val orb = p.world.spawn(p.location, org.bukkit.entity.ExperienceOrb::class.java)
+                orb.experience = exp.coerceAtLeast(1)
+            }
+
+            val dropped = hook.location.world.dropItem(hook.location, finalItem)
+            if (hook.hookedEntity is org.bukkit.entity.Item)
+                hook.hookedEntity?.remove()
+            hook.hookedEntity = dropped
+            return
+        }
+
+        // ===== Per-state handling =====
         when (event.state) {
             org.bukkit.event.player.PlayerFishEvent.State.FISHING -> {
-                if (lv >= 1) {
-                    val hook = event.hook
-                    // Reduce wait time for faster bites
+                if (isFisherman && lv >= 1) {
                     val reduction = when (lv) { 1 -> 0.20; 2 -> 0.35; 3 -> 0.50; else -> 0.0 }
                     val minWait = hook.minWaitTime
                     val maxWait = hook.maxWaitTime
                     val newMax = (maxWait * (1.0 - reduction)).toInt().coerceAtLeast(minWait + 20)
                     hook.setWaitTime(minWait, newMax)
-                    // Extend lure time for easier reaction
                     val lureM = 1.0 + (lv * 0.5)
                     hook.setLureTime(
                         (hook.minLureTime * lureM).toInt().coerceAtLeast(30),
@@ -1341,20 +1394,8 @@ class PassiveSkillListener : Listener {
 
                 val caught = hooked.itemStack
                 val rarity = FishingRarity.getRarity(caught)
-                val hook = event.hook
-                val hookLoc = hook.location.clone()
-                val uuid = p.uniqueId
 
-                // Daily per-chunk limit (max 11 fish per chunk per day)
-                val chunk = hookLoc.chunk
-                val ck = chunkKey(chunk.x, chunk.z)
-                val today = java.time.LocalDate.now().dayOfMonth
-                val (lastDay, amount) = chunkFishData[ck] ?: (-1 to 0)
-                val dailyAmount = if (lastDay == today) amount else 0
-                chunkFishData[ck] = today to (dailyAmount + 1)
-                val overfished = dailyAmount >= 11
-
-                // QTE difficulty based on skill level and item rarity
+                // Difficulty: non-fishermen = hardest (lv.0), fishermen scale up to easier
                 val difficulty = when (lv) {
                     0 -> when (rarity) {
                         FishingRarity.TRASH -> QTEProvider.QTEDifficulty.CHAOS
@@ -1366,7 +1407,7 @@ class PassiveSkillListener : Listener {
                         FishingRarity.FISH -> QTEProvider.QTEDifficulty.CHAOS
                         FishingRarity.TREASURE -> QTEProvider.QTEDifficulty.GLITCH
                     }
-                    else -> when (rarity) { // Lv.3
+                    else -> when (rarity) { // lv.3
                         FishingRarity.TRASH -> QTEProvider.QTEDifficulty.HARD
                         FishingRarity.FISH -> QTEProvider.QTEDifficulty.HARD
                         FishingRarity.TREASURE -> QTEProvider.QTEDifficulty.CHAOS
@@ -1378,54 +1419,33 @@ class PassiveSkillListener : Listener {
                     else -> QTEProvider.QTEType.ONE_TIME
                 }
 
-                // Keep bobber in water during QTE
+                qteing[uuid] = null
+
+                val hookLoc = hook.location.clone()
                 val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") ?: return
                 val keepTask = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
                     if (hook.isDead || !hook.isValid) return@Runnable
-                    hookLoc.world.spawnParticle(
-                        org.bukkit.Particle.SPLASH, hookLoc.clone().add(0.0, 0.5, 0.0), 5, 0.0, 0.0, 0.0, 0.1
-                    )
                     hook.velocity = org.bukkit.util.Vector(0.0, -0.05, 0.0)
-                }, 0L, 20L)
+                }, 0L, 5L)
 
                 QTEProvider.sendQTE(p, difficulty, type, { result: QTEProvider.QTEResult ->
                     keepTask.cancel()
-                    // Give item directly — no need for second reel-in event
-                    val reward = when {
-                        result == QTEProvider.QTEResult.UNABLE -> return@sendQTE
-                        overfished -> {
-                            this.sendMessage("§b繁星工坊 §7>> 这个区块的鱼钓光啦，明天再来吧？")
-                            org.bukkit.inventory.ItemStack(FishingRarity.TRASH.types.random())
+                    qteing.remove(uuid)
+                    when (result) {
+                        QTEProvider.QTEResult.ACCEPTED -> {
+                            qteing[uuid] = caught
+                            this.sendMessage("§b繁星工坊 §7>> 校准成功，收钩以获取物品")
                         }
-                        result == QTEProvider.QTEResult.ACCEPTED -> {
-                            this.sendMessage("§b繁星工坊 §7>> 校准成功！")
-                            caught
-                        }
-                        else -> {
+                        QTEProvider.QTEResult.REJECTED -> {
                             val worse = rarity.worse ?: FishingRarity.TRASH
-                            this.sendMessage("§b繁星工坊 §7>> 校准失败，上钩物品品质降级")
-                            org.bukkit.inventory.ItemStack(worse.types.random())
+                            qteing[uuid] = org.bukkit.inventory.ItemStack(worse.types.random())
+                            this.sendMessage("§b繁星工坊 §7>> 校准失败，上钩物品品质降级，收钩以获取物品")
                         }
+                        QTEProvider.QTEResult.UNABLE -> { /* fish gone */ }
                     }
-
-                    // 收获涛声 (Skill 1): extra fish
-                    val taoShengLv = com.waterful.project.career.skill.SkillExecutor.onShouHuoTaoShengCatch(this)
-                    if (taoShengLv > 0 && FishingRarity.getRarity(reward) == FishingRarity.FISH) {
-                        val bonus = if (taoShengLv == 3 && Math.random() <= 0.5) 2 else 1
-                        reward.amount += bonus
-                        this.sendMessage("§a✦ 收获涛声：额外获得 ${bonus} 条鱼！")
+                    if (qteing.containsKey(uuid) && !hook.isDead && hook.isValid) {
+                        hook.setTimeUntilBite(30)
                     }
-
-                    // 授人以渔 (Eureka 1): extra XP
-                    var exp = (1 + Math.random() * 6).toInt()
-                    if (this.hasEureka(Branch.FARMER_FISHERMAN, 1)) exp += 6
-                    if (FishingRarity.getRarity(reward) == FishingRarity.TRASH) exp /= 2
-                    val orb = this.world.spawn(this.location, org.bukkit.entity.ExperienceOrb::class.java)
-                    orb.experience = exp.coerceAtLeast(1)
-
-                    // Drop item at hook and give it to the player via the hook
-                    val dropped = hookLoc.world.dropItem(hookLoc, reward)
-                    hook.hookedEntity = dropped
                 }, "§e上钩", "§7请完成校准收回钓钩，否则战利品品质将§c降级")
             }
 
@@ -1560,6 +1580,67 @@ class PassiveSkillListener : Listener {
     @EventHandler
     fun onBloodlettingDeath(event: org.bukkit.event.entity.EntityDeathEvent) {
         bloodlettingTagged.remove(event.entity.uniqueId)
+    }
+
+    // ===== ARCHITECT_TRAFFIC skill 0 (路线规划): rail/ice placement chance to not consume =====
+
+    private val trafficRails = setOf(
+        Material.RAIL, Material.ACTIVATOR_RAIL, Material.DETECTOR_RAIL, Material.POWERED_RAIL
+    )
+    private val trafficIce = setOf(Material.PACKED_ICE, Material.BLUE_ICE)
+
+    @EventHandler
+    fun onPlaceTrafficBlock(event: org.bukkit.event.block.BlockPlaceEvent) {
+        val p = event.player
+        if (!p.hasBranch(Branch.ARCHITECT_TRAFFIC)) return
+        val type = event.block.type
+
+        // 路线规划 (Skill 0): rail placement refund
+        if (type in trafficRails) {
+            val lv = p.skillLevel(Branch.ARCHITECT_TRAFFIC, 0)
+            val chance = when (lv) { 1 -> 8; 2 -> 15; 3 -> 15; else -> return }
+            if (p.roll(chance, "路线规划·Lv.$lv 铁轨不消耗")) {
+                p.inventory.addItem(org.bukkit.inventory.ItemStack(type, 1))
+                p.sendMessage("§a✦ 路线规划：本次放置不消耗铁轨")
+            }
+        }
+
+        // 路线规划 Lv.3: ice placement refund
+        if (type in trafficIce) {
+            val lv = p.skillLevel(Branch.ARCHITECT_TRAFFIC, 0)
+            if (lv >= 3 && p.roll(10, "路线规划·Lv.3 蓝冰不消耗")) {
+                p.inventory.addItem(org.bukkit.inventory.ItemStack(type, 1))
+                p.sendMessage("§a✦ 路线规划：本次放置不消耗")
+            }
+        }
+
+        // 下界开路者 (Eureka 0): Nether rail/ice refund
+        if (p.hasEureka(Branch.ARCHITECT_TRAFFIC, 0) &&
+            p.world.environment == org.bukkit.World.Environment.NETHER &&
+            (type in trafficRails || type in trafficIce)) {
+            if (p.roll(15, "下界开路者·下界放置不消耗")) {
+                p.inventory.addItem(org.bukkit.inventory.ItemStack(type, 1))
+                p.sendMessage("§a✦ 下界开路者：下界放置不消耗")
+            }
+        }
+    }
+
+    // ===== ARCHITECT_TRAFFIC base: vehicle speed boost on enter =====
+
+    @EventHandler
+    fun onTrafficVehicleEnter(event: org.bukkit.event.vehicle.VehicleEnterEvent) {
+        val p = event.entered as? Player ?: return
+        if (!p.hasBranch(Branch.ARCHITECT_TRAFFIC)) return
+        val vehicle = event.vehicle
+        if (vehicle is org.bukkit.entity.Boat) vehicle.maxSpeed = 0.48  // +20%
+        if (vehicle is org.bukkit.entity.Minecart) vehicle.maxSpeed = 0.48
+    }
+
+    @EventHandler
+    fun onTrafficVehicleExit(event: org.bukkit.event.vehicle.VehicleExitEvent) {
+        val vehicle = event.vehicle
+        if (vehicle is org.bukkit.entity.Boat) vehicle.maxSpeed = 0.4  // reset
+        if (vehicle is org.bukkit.entity.Minecart) vehicle.maxSpeed = 0.4
     }
 
     // ===== 凌空创想: scaffolding boost on move =====

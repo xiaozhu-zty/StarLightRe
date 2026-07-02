@@ -29,6 +29,12 @@ class PlayerListener : Listener {
         // Give career scroll if not present
         val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") as? org.bukkit.plugin.java.JavaPlugin
         if (plugin != null) {
+            // Restore station data
+            val dataStore = com.waterful.project.career.data.PlayerDataStore(plugin)
+            val stationData = dataStore.loadStation(player.uniqueId)
+            com.waterful.project.station.StationManager.restoreStation(player.uniqueId, stationData)
+        }
+        if (plugin != null) {
             val hasScroll = player.inventory.any { it != null && CareerItems.isScroll(plugin, it) }
             if (!hasScroll) {
                 player.inventory.addItem(CareerItems.createScroll(plugin))

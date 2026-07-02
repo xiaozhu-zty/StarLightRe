@@ -54,6 +54,8 @@ class StarLightRe : JavaPlugin() {
         RecipeManager.init(this)
         SkillRegistry.init()
         com.waterful.project.career.skill.QTEProvider.init(this)
+        com.waterful.project.stamina.StaminaManager.init(this, playerDataStore)
+        com.waterful.project.station.StationManager.init(this)
         ResonanceManager.init(configManager, this)
 
         // Register commands
@@ -72,6 +74,13 @@ class StarLightRe : JavaPlugin() {
         val unlockCmd = UnlockCommand()
         getCommand("unlock")?.setExecutor(unlockCmd)
         getCommand("unlock")?.tabCompleter = unlockCmd
+        val staminaCmd = com.waterful.project.stamina.StaminaCommand
+        getCommand("tl")?.setExecutor(staminaCmd)
+        getCommand("tlbl")?.setExecutor(staminaCmd)
+        getCommand("tlhf")?.setExecutor(staminaCmd)
+        val editCmd = com.waterful.project.career.command.EditCommand()
+        getCommand("edit")?.setExecutor(editCmd)
+        getCommand("edit")?.tabCompleter = editCmd
 
         // Register listeners
         server.pluginManager.registerEvents(PlayerListener(), this)
@@ -107,6 +116,15 @@ class StarLightRe : JavaPlugin() {
     override fun onDisable() {
         RecipeManager.unregister()
         playerDataStore.saveAll()
+        // Save stamina & station for all online players
+        for (player in server.onlinePlayers) {
+            com.waterful.project.stamina.StaminaManager.staminaMap[player.uniqueId]?.let {
+                playerDataStore.saveStamina(player.uniqueId, it)
+            }
+            com.waterful.project.station.StationManager.getStationData(player.uniqueId)?.let {
+                playerDataStore.saveStation(player.uniqueId, it)
+            }
+        }
         logger.info("${description.name} 已禁用，所有玩家数据已保存。")
     }
 

@@ -257,4 +257,74 @@ class PlayerDataStore(private val plugin: JavaPlugin) {
         file.delete()
         plugin.logger.warning("[StarLightRe] Corrupted data backed up to ${backupFile.name}")
     }
+
+    // ===== Stamina persistence =====
+
+    fun saveStamina(uuid: UUID, data: com.waterful.project.stamina.StaminaData) {
+        try {
+            val file = getPlayerFile(uuid)
+            val cfg = if (file.exists()) YamlConfiguration.loadConfiguration(file) else YamlConfiguration()
+            cfg.set("stamina", data.stamina)
+            cfg.save(file)
+        } catch (e: Exception) {
+            plugin.logger.warning("[StarLightRe] Failed to save stamina for $uuid: ${e.message}")
+        }
+    }
+
+    fun loadStamina(uuid: UUID): com.waterful.project.stamina.StaminaData {
+        return try {
+            val file = getPlayerFile(uuid)
+            if (!file.exists()) return com.waterful.project.stamina.StaminaData()
+            val cfg = YamlConfiguration.loadConfiguration(file)
+            if (cfg.contains("stamina")) {
+                com.waterful.project.stamina.StaminaData(cfg.getDouble("stamina", 2000.0))
+            } else {
+                com.waterful.project.stamina.StaminaData()
+            }
+        } catch (e: Exception) {
+            com.waterful.project.stamina.StaminaData()
+        }
+    }
+
+    // ===== Station persistence =====
+
+    fun saveStation(uuid: UUID, data: com.waterful.project.station.StationData) {
+        try {
+            val file = getPlayerFile(uuid)
+            val cfg = if (file.exists()) YamlConfiguration.loadConfiguration(file) else YamlConfiguration()
+            cfg.set("station.level", data.level)
+            cfg.set("station.stamp", data.stamp)
+            data.location?.let {
+                cfg.set("station.location.world", it.world?.name)
+                cfg.set("station.location.x", it.x)
+                cfg.set("station.location.y", it.y)
+                cfg.set("station.location.z", it.z)
+            }
+            cfg.save(file)
+        } catch (e: Exception) {
+            plugin.logger.warning("[StarLightRe] Failed to save station for $uuid: ${e.message}")
+        }
+    }
+
+    fun loadStation(uuid: UUID): com.waterful.project.station.StationData? {
+        return try {
+            val file = getPlayerFile(uuid)
+            if (!file.exists() || !YamlConfiguration.loadConfiguration(file).contains("station.level")) return null
+            val cfg = YamlConfiguration.loadConfiguration(file)
+            val level = cfg.getInt("station.level", 1)
+            val stamp = cfg.getLong("station.stamp", 0L)
+            val worldName = cfg.getString("station.location.world")
+            val loc = if (worldName != null) {
+                org.bukkit.Location(
+                    org.bukkit.Bukkit.getWorld(worldName),
+                    cfg.getDouble("station.location.x"),
+                    cfg.getDouble("station.location.y"),
+                    cfg.getDouble("station.location.z")
+                )
+            } else null
+            com.waterful.project.station.StationData(uuid, level, loc, stamp)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

@@ -46,3 +46,15 @@ commands:
   unlock:
     description: "解除或恢复玩家的6分支3职业限制 (OP)"
     usage: "/unlock <玩家名>"
+  tl:
+    description: "查询当前体力"
+    usage: "/tl"
+  tlbl:
+    description: "查询当前体力消耗倍率"
+    usage: "/tlbl"
+  tlhf:
+    description: "查询当前体力恢复速率"
+    usage: "/tlhf"
+  edit:
+    description: "修改玩家变量值 (OP)"
+    usage: "/edit <玩家名> <类型> <数值>"

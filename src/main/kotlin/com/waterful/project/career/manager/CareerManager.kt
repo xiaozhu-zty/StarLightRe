@@ -297,6 +297,15 @@ object CareerManager {
 
         player.sendMessage("§5✦ 已解锁顿悟：${eurekaOption.name}！")
         player.sendMessage("§7分支等级提升至：Lv.${cp.getBranchLevel(branch)}")
+
+        // 山海一过: destroy existing station
+        if (eurekaOption.id == "warrior_explorer_eureka_0") {
+            val station = com.waterful.project.station.StationManager.stations[player.uniqueId]
+            if (station?.location != null) {
+                station.deleteFromWorld()
+                player.sendMessage("§b繁星工坊 §7>> 由于解锁了§d山海一过§7，你的驻扎篝火已消失")
+            }
+        }
         return true
     }
 
