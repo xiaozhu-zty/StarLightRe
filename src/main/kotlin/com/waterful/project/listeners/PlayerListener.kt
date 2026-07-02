@@ -86,6 +86,9 @@ class PlayerListener : Listener {
             if (plugin != null) {
                 val offhand = p.inventory.itemInOffHand
                 if (offhand.type != org.bukkit.Material.AIR && CareerItems.isScroll(plugin, offhand)) {
+                    // Shift+F in scroll mode → normal swap (allow swapping offhand items)
+                    if (p.isSneaking) return
+                    // F (without shift) in scroll mode → release bound skill
                     event.isCancelled = true
                     val slot = p.inventory.heldItemSlot // 0-8
                     val bindStr = cp.hotkeyBinds[slot]

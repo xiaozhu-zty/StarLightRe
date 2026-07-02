@@ -83,7 +83,7 @@ object BranchGUI {
 
         when (slot) {
             // Back
-            37 -> { ClassGUI.open(player, branch.careerClass); return true }
+            37 -> { CareerGUI.open(player); return true }
 
             // Skill headers (click to upgrade or bind)
             12 -> handleSkillClick(player, cp, branch, 0, isShift)
@@ -146,7 +146,20 @@ object BranchGUI {
     }
 
     private fun handleEurekaChooseClick(player: Player, cp: CareerPlayer, branch: Branch, index: Int) {
-        if (cp.chosenEurekas.containsKey(branch)) { player.sendMessage("§c该分支已选择过顿悟！"); return }
+        // Shift+Click on an already-chosen eureka with CD → toggle auto-release
+        if (cp.chosenEurekas.containsKey(branch)) {
+            val eureka = CareerManager.getEurekaOptions(branch).getOrNull(index) ?: return
+            if (eureka.cooldownSeconds > 0) {
+                val autoKey = "${branch.name}_eureka_auto"
+                val current = cp.autoCastSkills[autoKey] ?: false
+                cp.autoCastSkills[autoKey] = !current
+                player.sendMessage("§6${eureka.name} 自动释放：${if (!current) "§aON" else "§cOFF"}")
+                open(player, branch)
+                return
+            }
+            player.sendMessage("§c该分支已选择过顿悟！")
+            return
+        }
         if (!cp.isBranchMaxed(branch)) { player.sendMessage("§c需要所有技能满级才能解锁顿悟！"); return }
         CareerManager.chooseEureka(player, branch, index)
         open(player, branch)
@@ -250,7 +263,14 @@ object BranchGUI {
                 desc.add(Component.text("能力：", NamedTextColor.GOLD))
                 desc.addAll(IconFactory.wrapLore(eureka.description, NamedTextColor.GRAY))
                 desc.add(Component.text(""))
-                if (chosen) desc.add(Component.text("✦ 已选择", NamedTextColor.GREEN))
+                if (chosen) {
+                    desc.add(Component.text("✦ 已选择", NamedTextColor.GREEN))
+                    if (eureka.cooldownSeconds > 0) {
+                        val autoKey = "${branch.name}_eureka_auto"
+                        val isAuto = cp.autoCastSkills[autoKey] ?: false
+                        desc.add(Component.text("自动释放：${if (isAuto) "§aON" else "§cOFF"} (点击切换)", NamedTextColor.GRAY))
+                    }
+                }
                 else if (cp.isBranchMaxed(branch)) desc.add(Component.text("点击解锁此顿悟", NamedTextColor.GOLD))
                 else desc.add(Component.text("需要所有技能满级", NamedTextColor.RED))
                 if (eureka.cooldownSeconds > 0) desc.add(Component.text("冷却：${eureka.cooldownSeconds}秒", NamedTextColor.AQUA))

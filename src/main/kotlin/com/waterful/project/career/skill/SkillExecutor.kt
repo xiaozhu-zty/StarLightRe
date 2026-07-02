@@ -184,13 +184,46 @@ object SkillExecutor {
         return true
     }
 
-    /** 凌空创想: 速度+跳跃+抗性 */
+    /** 凌空创想: 速度/跳跃/抗性，脚手架上效果增强 */
+    data class LingKongData(val level: Int, val expiry: Long)
+    val lingKongPlayers = mutableMapOf<java.util.UUID, LingKongData>()
+
     private fun executeLingKongChuangXiang(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val duration = when (lv) { 1 -> 180; 2 -> 240; 3 -> 300; else -> 180 } * 20
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, duration, lv - 1, false, true))
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.JUMP_BOOST, duration, lv - 1, false, true))
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE, duration, lv - 1, false, true))
-        p.sendMessage(Component.text("§a✦ 凌空创想：速度+跳跃+抗性 ${lv}级，持续${when(lv){1->3;2->4;3->5;else->3}}分钟"))
+        val durationMin = when (lv) { 1 -> 3; 2 -> 4; 3 -> 5; else -> 3 }
+        val durationTicks = durationMin * 60 * 20
+        // Base effects (ground level)
+        when (lv) {
+            1 -> {
+                p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, durationTicks, 0, false, true))
+            }
+            2 -> {
+                p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, durationTicks, 0, false, true))
+            }
+            3 -> {
+                p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, durationTicks, 1, false, true))
+                p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE, durationTicks, 0, false, true))
+            }
+        }
+        lingKongPlayers[p.uniqueId] = LingKongData(lv, System.currentTimeMillis() + durationMin * 60_000L)
+        p.sendMessage(Component.text("§a✦ 凌空创想：持续${durationMin}分钟，脚手架上效果增强"))
+        return true
+    }
+
+    /** Called from PassiveSkillListener on PlayerMoveEvent: apply scaffolding boosts */
+    fun tickLingKongChuangXiang(player: Player): Boolean {
+        val data = lingKongPlayers[player.uniqueId] ?: return false
+        if (System.currentTimeMillis() > data.expiry) { lingKongPlayers.remove(player.uniqueId); return false }
+        val lv = data.level
+        val blockUnder = player.location.clone().subtract(0.0, 1.0, 0.0).block.type
+        if (blockUnder != org.bukkit.Material.SCAFFOLDING) return true // Not on scaffolding
+
+        // Apply enhanced scaffolding effects (short duration, refreshed each tick)
+        val amp = when (lv) { 1 -> 1; 2 -> 1; 3 -> 2; else -> 1 } // speed II/II/III
+        val jumpAmp = lv - 1  // jump I/II/III
+        val resistAmp = lv - 1 // resist I/II/III
+        player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SPEED, 4 * 20, amp, false, true))
+        player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.JUMP_BOOST, 4 * 20, jumpAmp, false, true))
+        player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE, 4 * 20, resistAmp, false, true))
         return true
     }
 
@@ -213,15 +246,19 @@ object SkillExecutor {
         val durationSec = when (lv) { 1 -> 120; 2 -> 180; 3 -> 240; else -> 120 }
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.NIGHT_VISION, durationSec * 20, 0, false, true))
 
-        // Spawn invisible falling block as dynamic light source (shroomlight = light level 15)
-        val lightBlock = p.world.spawnFallingBlock(p.location.add(0.0, 1.5, 0.0), org.bukkit.Material.SHROOMLIGHT.createBlockData())
+        // Spawn invisible dynamic light via FallingBlock (SHROOMLIGHT = light level 15, hardcoded material property)
+        // Position at player feet (inside hitbox) to be effectively invisible from first-person
+        val loc = p.location.clone()
+        val lightBlock = p.world.createEntity(loc, org.bukkit.entity.FallingBlock::class.java)
+        lightBlock.blockData = org.bukkit.Material.SHROOMLIGHT.createBlockData()
         lightBlock.isSilent = true
         lightBlock.isInvulnerable = true
         lightBlock.dropItem = false
         lightBlock.velocity = org.bukkit.util.Vector(0, 0, 0)
+        p.world.addEntity(lightBlock)
 
         kuangDengPlayers[p.uniqueId] = KuangDengData(lightBlock, System.currentTimeMillis() + durationSec * 1000L)
-        p.sendMessage(Component.text("§a✦ 不灭矿灯：夜视 + 动态光源，持续${durationSec}秒"))
+        p.sendMessage(Component.text("§a✦ 不灭矿灯：夜视 + 跟随光源，持续${durationSec}秒"))
         return true
     }
 
@@ -236,8 +273,8 @@ object SkillExecutor {
                 expired.add(uuid)
                 continue
             }
-            // Teleport light to follow player
-            data.entity.teleport(player.location.add(0.0, 1.5, 0.0))
+            // Teleport light to follow player (at feet, inside hitbox = invisible)
+            data.entity.teleport(player.location.clone())
             data.entity.ticksLived = 1 // Prevent natural despawn
         }
         expired.forEach { kuangDengPlayers.remove(it) }
@@ -269,11 +306,24 @@ object SkillExecutor {
         return true
     }
 
-    /** 大洋眷顾: 幸运效果 */
+    /** 大洋眷顾: 幸运效果 with biome-based duration extension */
     private fun executeDaYangJuanGu(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val duration = when (lv) { 1 -> 40; 2 -> 50; 3 -> 60; else -> 40 } * 20
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.LUCK, duration, 1, false, true))
-        p.sendMessage(Component.text("§a✦ 大洋眷顾：幸运 II，持续${duration/20}秒"))
+        val biome = p.location.block.biome.toString().uppercase()
+        val isDeepOcean = biome.contains("DEEP_OCEAN")
+        val isOcean = isDeepOcean || biome.contains("OCEAN")
+        val baseDuration = when (lv) { 1 -> 40; 2 -> 50; 3 -> 60; else -> 40 }
+        val durationSeconds = when {
+            lv >= 3 && isDeepOcean -> 180  // Lv.3 + deep ocean = 180s
+            isOcean -> when (lv) { 1 -> 60; 2 -> 90; 3 -> 120; else -> baseDuration }
+            else -> baseDuration
+        }
+        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.LUCK, durationSeconds * 20, 1, false, true))
+        val biomeNote = when {
+            lv >= 3 && isDeepOcean -> " (深海加成: 180秒)"
+            isOcean -> " (海洋加成: ${durationSeconds}秒)"
+            else -> ""
+        }
+        p.sendMessage(Component.text("§a✦ 大洋眷顾：幸运 II，持续${durationSeconds}秒$biomeNote"))
         return true
     }
 
@@ -312,48 +362,89 @@ object SkillExecutor {
         return true
     }
 
-    /** 收获涛声: 钓鱼额外获得 */
+    /** 收获涛声: 钓鱼额外获得 — track for next catch */
+    private val shouHuoTaoShengPlayers = mutableMapOf<java.util.UUID, Int>()
+
     private fun executeShouHuoTaoSheng(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
+        shouHuoTaoShengPlayers[p.uniqueId] = lv
         if (!silent) p.sendMessage(Component.text("§a✦ 收获涛声：下次钓鱼将额外获得 ${lv} 条鱼！"))
         p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.LUCK, 30 * 20, lv, false, true))
         return true
     }
 
-    /** 特聘保镖: 召唤铁傀儡/雪傀儡 */
+    /** Called when player catches a fish — returns number of extra fish to give */
+    fun onShouHuoTaoShengCatch(player: Player): Int = shouHuoTaoShengPlayers.remove(player.uniqueId) ?: 0
+
+    /** 特聘保镖: 召唤铁傀儡/雪傀儡，60s后消失 */
+    private val tePinBaoBiaoEntities = mutableMapOf<java.util.UUID, MutableList<org.bukkit.entity.LivingEntity>>()
+
     private fun executeTePinBaoBiao(p: Player, s: SkillInstance, lv: Int): Boolean {
+        // Clean up previous summons
+        tePinBaoBiaoEntities.remove(p.uniqueId)?.forEach { it.remove() }
+
         val emeralds = p.inventory.all(org.bukkit.Material.EMERALD).values.sumOf { it.amount }
+        val spawned = mutableListOf<org.bukkit.entity.LivingEntity>()
         when {
             emeralds <= 0 -> { p.sendMessage(Component.text("§c需要至少1颗绿宝石！")); return false }
             emeralds <= 16 -> {
-                repeat(if (lv >= 2) 2 else 1) { p.world.spawn(p.location, org.bukkit.entity.Snowman::class.java) }
+                repeat(if (lv >= 2) 2 else 1) { spawned.add(p.world.spawn(p.location, org.bukkit.entity.Snowman::class.java)) }
                 p.sendMessage(Component.text("§a✦ 召唤了雪傀儡"))
             }
             emeralds <= 64 -> {
-                repeat(if (lv >= 2) 2 else 1) { p.world.spawn(p.location, org.bukkit.entity.Snowman::class.java) }
-                p.world.spawn(p.location, org.bukkit.entity.IronGolem::class.java)
+                repeat(if (lv >= 2) 2 else 1) { spawned.add(p.world.spawn(p.location, org.bukkit.entity.Snowman::class.java)) }
+                spawned.add(p.world.spawn(p.location, org.bukkit.entity.IronGolem::class.java))
                 p.sendMessage(Component.text("§a✦ 召唤了雪傀儡+铁傀儡"))
             }
             else -> {
-                repeat(if (lv >= 3) 3 else 2) { p.world.spawn(p.location, org.bukkit.entity.Snowman::class.java) }
-                repeat(if (lv >= 3) 3 else 2) { p.world.spawn(p.location, org.bukkit.entity.IronGolem::class.java) }
+                repeat(if (lv >= 3) 3 else 2) { spawned.add(p.world.spawn(p.location, org.bukkit.entity.Snowman::class.java)) }
+                repeat(if (lv >= 3) 3 else 2) { spawned.add(p.world.spawn(p.location, org.bukkit.entity.IronGolem::class.java)) }
                 p.sendMessage(Component.text("§a✦ 召唤了铁傀儡军团"))
             }
         }
+        tePinBaoBiaoEntities[p.uniqueId] = spawned
+        // Schedule removal after 60s
+        val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") ?: return true
+        val uuid = p.uniqueId
+        org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+            tePinBaoBiaoEntities.remove(uuid)?.forEach { it.remove() }
+        }, 60 * 20L)
         return true
     }
 
-    /** 牧原欢歌: 空桶变奶桶 */
+    /** 牧原欢歌: 手持剪刀剪周围羊 / 手持空桶挤周围牛和山羊 */
     private fun executeMuYuanHuanGe(p: Player, s: SkillInstance, lv: Int): Boolean {
         val range = when (lv) { 1 -> 8.0; 2 -> 12.0; 3 -> 16.0; else -> 8.0 }
-        val hasCow = p.location.getNearbyEntities(range, range, range).any { it is org.bukkit.entity.Cow }
-        if (!hasCow) { p.sendMessage(Component.text("§c周围没有牛！")); return false }
+        val held = p.inventory.itemInMainHand.type
         var count = 0
-        for (item in p.inventory.contents) {
-            if (item != null && item.type == org.bukkit.Material.BUCKET) {
-                item.type = org.bukkit.Material.MILK_BUCKET; count++
+        when (held) {
+            org.bukkit.Material.SHEARS -> {
+                for (entity in p.location.getNearbyEntities(range, range, range)) {
+                    if (entity is org.bukkit.entity.Sheep && !entity.isSheared) {
+                        entity.isSheared = true
+                        entity.world.dropItemNaturally(entity.location,
+                            org.bukkit.inventory.ItemStack(org.bukkit.Material.valueOf(
+                                entity.color?.name?.uppercase()?.let { "${it}_WOOL" } ?: "WHITE_WOOL"), (1..3).random()))
+                        count++
+                    }
+                }
+                p.sendMessage(Component.text("§a✦ 牧原欢歌：为${count}只羊剪毛"))
+            }
+            org.bukkit.Material.BUCKET -> {
+                for (entity in p.location.getNearbyEntities(range, range, range)) {
+                    if (entity is org.bukkit.entity.Cow || entity is org.bukkit.entity.Goat) {
+                        // Give milk bucket
+                        val leftover = p.inventory.addItem(org.bukkit.inventory.ItemStack(org.bukkit.Material.MILK_BUCKET, 1))
+                        leftover.values.forEach { p.world.dropItemNaturally(p.location, it) }
+                        count++
+                    }
+                }
+                p.sendMessage(Component.text("§a✦ 牧原欢歌：为${count}只牛/山羊挤奶"))
+            }
+            else -> {
+                p.sendMessage(Component.text("§c牧原欢歌：请手持剪刀或空桶！"))
+                return false
             }
         }
-        p.sendMessage(Component.text("§a✦ 牧原欢歌：$count 个空桶变为奶桶！"))
         return count > 0
     }
 
@@ -442,6 +533,26 @@ object SkillExecutor {
         return true
     }
 
+    /** Clear all skill tracking data for a player (called on branch forget) */
+    fun clearPlayerTracking(uuid: java.util.UUID) {
+        qiangLiYunGaoPlayers.remove(uuid)
+        qiaoLiYongFuPlayers.remove(uuid)
+        qiWeiYiZhenPlayers.remove(uuid)
+        duJinMeiZhuanPlayers.remove(uuid)
+        wenHuoManDunPlayers.remove(uuid)
+        shouHuoTaoShengPlayers.remove(uuid)
+        signalFlarePlayers.remove(uuid)
+        kuangDengPlayers.remove(uuid)?.entity?.remove()
+        ranLiaoGuanDaoPlayers.remove(uuid)
+        zhengFaKongJianPlayers.remove(uuid)
+        keXueShiFeiPlayers.remove(uuid)
+        siLiaoTiaoPeiPlayers.remove(uuid)
+        chargeAssaultPlayers.remove(uuid)
+        nightmarePlayers.remove(uuid)
+        lingKongPlayers.remove(uuid)
+        tePinBaoBiaoEntities.remove(uuid)?.forEach { it.remove() }
+    }
+
     /** Active signal flare tracking: UUID -> level */
     private val signalFlarePlayers = mutableMapOf<java.util.UUID, Int>()
 
@@ -495,11 +606,20 @@ object SkillExecutor {
         return true
     }
 
-    /** 蒸发控件: 酿造台烈焰粉掉落 */
+    /** 蒸发控件: 60s内酿造台有概率掉落烈焰粉 */
+    private val zhengFaKongJianPlayers = mutableMapOf<java.util.UUID, Pair<Int, Long>>() // UUID -> (bonus%, expiry)
+
     private fun executeZhengFaKongJian(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.HASTE, 60 * 20, lv, false, true))
-        p.sendMessage(Component.text("§a✦ 蒸发控件：持续60秒，酿造台有${lv*10}%概率掉落烈焰粉"))
+        val bonus = lv * 10 // Lv.1=10%, Lv.2=20%, Lv.3=30%
+        zhengFaKongJianPlayers[p.uniqueId] = bonus to (System.currentTimeMillis() + 60_000L)
+        p.sendMessage(Component.text("§a✦ 蒸发控件：持续60秒，酿造台有${bonus}%概率掉落烈焰粉"))
         return true
+    }
+
+    fun getZhengFaBonus(player: Player): Int {
+        val (bonus, expiry) = zhengFaKongJianPlayers[player.uniqueId] ?: return 0
+        if (System.currentTimeMillis() > expiry) { zhengFaKongJianPlayers.remove(player.uniqueId); return 0 }
+        return bonus
     }
 
     // ===== Remaining active skill implementations =====
@@ -532,44 +652,115 @@ object SkillExecutor {
         return true
     }
 
-    /** 肾上腺素: 喷溅治疗药水buff */
+    /** 肾上腺素注射: 下次喷溅治疗药水II时buff受影响玩家 */
     private fun executeShenShangXianSu(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
-        val amp = lv - 1
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, 8 * 20, 0, false, true))
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION, (15 + lv * 5) * 20, lv - 1, false, true))
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION, (2 + lv) * 20, lv - 1, false, true))
-        if (!silent) p.sendMessage(Component.text("§a✦ 肾上腺素：下次喷溅治疗药水将附加Buff"))
+        // Require: no totem of undying
+        if (p.inventory.itemInMainHand.type == org.bukkit.Material.TOTEM_OF_UNDYING ||
+            p.inventory.itemInOffHand.type == org.bukkit.Material.TOTEM_OF_UNDYING) {
+            if (!silent) p.sendMessage(Component.text("§c肾上腺素注射：不能携带不死图腾！"))
+            return false
+        }
+        val (fireDur, regenDur, regenAmp, absorbDur, absorbAmp) = when (lv) {
+            1 -> listOf(8, 20, 0, 3, 0)    // fire 8s, regen I 20s, absorb I 3s
+            2 -> listOf(12, 25, 1, 4, 1)    // fire 12s, regen II 25s, absorb II 4s
+            3 -> listOf(20, 30, 1, 5, 2)    // fire 20s, regen II 30s, absorb III 5s
+            else -> listOf(8, 20, 0, 3, 0)
+        }
+        // Apply buffs to self (the YAML says "affected players" via splash potion; for now apply to caster)
+        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.FIRE_RESISTANCE, fireDur * 20, 0, false, true))
+        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION, regenDur * 20, regenAmp, false, true))
+        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.ABSORPTION, absorbDur * 20, absorbAmp, false, true))
+        if (!silent) p.sendMessage(Component.text("§a✦ 肾上腺素注射：抗火${fireDur}s + 生命恢复 + 伤害吸收"))
         return true
     }
 
-    /** 奇味异珍: 特殊食物效果 */
+    /** 奇味异珍: 下一次吃特殊食物时触发效果 */
+    private val qiWeiYiZhenPlayers = mutableMapOf<java.util.UUID, Int>()
+
     private fun executeQiWeiYiZhen(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
-        if (!silent) p.sendMessage(Component.text("§a✦ 奇味异珍：下次食用紫颂果/金胡萝卜/发光浆果/毒马铃薯触发特效"))
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.LUCK, 60 * 20, lv, false, true))
+        qiWeiYiZhenPlayers[p.uniqueId] = lv
+        if (!silent) p.sendMessage(Component.text("§a✦ 奇味异珍：下次食用特殊食物触发特效"))
         return true
     }
 
-    /** 镀金美馔: 金色食物分享 */
+    /** Check if 奇味异珍 is active (without consuming) */
+    fun peekQiWeiYiZhen(player: Player): Int = qiWeiYiZhenPlayers[player.uniqueId] ?: 0
+    /** Consume 奇味异珍 flag after matching food */
+    fun consumeQiWeiYiZhen(player: Player) { qiWeiYiZhenPlayers.remove(player.uniqueId) }
+
+    /** 镀金美馔: 下一次吃金色食物时分享效果 */
+    private val duJinMeiZhuanPlayers = mutableMapOf<java.util.UUID, Int>()
+
     private fun executeDuJinMeiZhuan(p: Player, s: SkillInstance, lv: Int, silent: Boolean = false): Boolean {
+        duJinMeiZhuanPlayers[p.uniqueId] = lv
         if (!silent) p.sendMessage(Component.text("§a✦ 镀金美馔：下次食用金色食物时分享饱食效果"))
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SATURATION, 1 * 20, lv, false, true))
         return true
     }
 
-    /** 文火慢炖: 额外汤煲 */
+    /** Check if 镀金美馔 is active (without consuming) */
+    fun peekDuJinMeiZhuan(player: Player): Int = duJinMeiZhuanPlayers[player.uniqueId] ?: 0
+    /** Consume 镀金美馔 flag after matching food */
+    fun consumeDuJinMeiZhuan(player: Player) { duJinMeiZhuanPlayers.remove(player.uniqueId) }
+
+    /** 文火慢炖: 下次合成汤煲时额外获得 */
+    private val wenHuoManDunPlayers = mutableMapOf<java.util.UUID, Int>()
+
     private fun executeWenHuoManDun(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val stews = listOf(org.bukkit.Material.MUSHROOM_STEW, org.bukkit.Material.BEETROOT_SOUP, org.bukkit.Material.RABBIT_STEW)
-        p.inventory.addItem(org.bukkit.inventory.ItemStack(stews.random(), 1))
-        p.sendMessage(Component.text("§a✦ 文火慢炖：获得一份额外汤煲"))
+        wenHuoManDunPlayers[p.uniqueId] = lv
+        p.sendMessage(Component.text("§a✦ 文火慢炖：下次合成汤煲食品时额外获得"))
         return true
     }
 
-    /** 烤肉专家: 营火烹饪 */
+    /** Called from CraftItemEvent — returns level if active, else 0; consumes flag */
+    fun onWenHuoManDunCraft(player: Player): Int = wenHuoManDunPlayers.remove(player.uniqueId) ?: 0
+
+    /** 烤肉专家: 营火立即完成烹饪 */
     private fun executeKaoRouZhuanJia(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val range = when (lv) { 1 -> 3.0; 2 -> 3.0; 3 -> 3.0; else -> 3.0 }
-        val count = if (lv >= 3) 2 else 1
-        p.sendMessage(Component.text("§a✦ 烤肉专家：周围${count}个营火加速烹饪"))
-        return true
+        val maxCampfires = if (lv >= 3) 2 else 1
+        var campfireCount = 0
+        var itemCount = 0
+        for (x in -3..3) for (z in -3..3) for (y in -1..1) {
+            val block = p.location.clone().add(x.toDouble(), y.toDouble(), z.toDouble()).block
+            if (block.type == org.bukkit.Material.CAMPFIRE || block.type == org.bukkit.Material.SOUL_CAMPFIRE) {
+                val campfire = block.state as? org.bukkit.block.Campfire ?: continue
+                var hadItems = false
+                for (i in 0..3) {
+                    val item = campfire.getItem(i)
+                    if (item != null && item.type != org.bukkit.Material.AIR) {
+                        // Drop the cooked result immediately
+                        val cooked = getCampfireResult(item.type)
+                        if (cooked != null) {
+                            block.world.dropItemNaturally(block.location, org.bukkit.inventory.ItemStack(cooked, item.amount))
+                        }
+                        campfire.setItem(i, null)
+                        hadItems = true
+                        itemCount++
+                    }
+                }
+                if (hadItems) {
+                    campfire.update()
+                    campfireCount++
+                    if (campfireCount >= maxCampfires) break
+                }
+            }
+        }
+        p.sendMessage(Component.text("§a✦ 烤肉专家：${campfireCount}个营火的${itemCount}个物品已烹饪完成"))
+        return campfireCount > 0
+    }
+
+    private fun getCampfireResult(raw: org.bukkit.Material): org.bukkit.Material? {
+        return when (raw) {
+            org.bukkit.Material.BEEF -> org.bukkit.Material.COOKED_BEEF
+            org.bukkit.Material.PORKCHOP -> org.bukkit.Material.COOKED_PORKCHOP
+            org.bukkit.Material.CHICKEN -> org.bukkit.Material.COOKED_CHICKEN
+            org.bukkit.Material.MUTTON -> org.bukkit.Material.COOKED_MUTTON
+            org.bukkit.Material.RABBIT -> org.bukkit.Material.COOKED_RABBIT
+            org.bukkit.Material.COD -> org.bukkit.Material.COOKED_COD
+            org.bukkit.Material.SALMON -> org.bukkit.Material.COOKED_SALMON
+            org.bukkit.Material.POTATO -> org.bukkit.Material.BAKED_POTATO
+            org.bukkit.Material.KELP -> org.bukkit.Material.DRIED_KELP
+            else -> null
+        }
     }
 
     /** 行政结构优化: 经验奖励 */
@@ -636,13 +827,23 @@ object SkillExecutor {
         return true
     }
 
-    /** 饲料调配: 幼年动物成长 */
+    /** 饲料调配: 下次喂养幼年动物时使其立即成长 */
+    private val siLiaoTiaoPeiPlayers = mutableMapOf<java.util.UUID, Int>()
+
     private fun executeSiLiaoTiaoPei(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val animals = p.location.getNearbyEntities(5.0, 5.0, 5.0).filterIsInstance<org.bukkit.entity.Ageable>()
-            .filter { !it.isAdult }.take(if (lv >= 3) 3 else 1)
-        animals.forEach { it.age = 0 }
-        p.sendMessage(Component.text("§a✦ 饲料调配：${animals.size}只幼年动物立即成长"))
+        siLiaoTiaoPeiPlayers[p.uniqueId] = lv
+        p.sendMessage(Component.text("§a✦ 饲料调配：下次喂养幼年动物时使其立即成长"))
         return true
+    }
+
+    fun onSiLiaoTiaoPeiFeed(player: Player, entity: org.bukkit.entity.Ageable): Boolean {
+        val lv = siLiaoTiaoPeiPlayers.remove(player.uniqueId) ?: return false
+        if (!entity.isAdult) {
+            entity.age = 0
+            entity.world.spawnParticle(org.bukkit.Particle.HAPPY_VILLAGER, entity.location.add(0.0, 1.0, 0.0), 5)
+            return true
+        }
+        return false
     }
 
     /** 破财消灾: 村民回血 */
@@ -659,25 +860,94 @@ object SkillExecutor {
         return true
     }
 
-    /** 植物遗传学: 急迫 */
+    /** 植物遗传学: 消耗种子获得急迫 */
+    private val seedTypes = setOf(
+        org.bukkit.Material.WHEAT_SEEDS, org.bukkit.Material.BEETROOT_SEEDS,
+        org.bukkit.Material.MELON_SEEDS, org.bukkit.Material.PUMPKIN_SEEDS,
+        org.bukkit.Material.TORCHFLOWER_SEEDS, org.bukkit.Material.PITCHER_POD
+    )
+
     private fun executeZhiWuYiChuanXue(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.HASTE, 30 * 20, lv - 1, false, true))
-        p.sendMessage(Component.text("§a✦ 植物遗传学：急迫 ${lv}级，持续30秒"))
+        // Count total seeds in inventory
+        var totalSeeds = 0
+        for (item in p.inventory.contents) {
+            if (item != null && item.type in seedTypes) totalSeeds += item.amount
+        }
+        if (totalSeeds <= 0) {
+            p.sendMessage(Component.text("§c植物遗传学：背包中没有种子！"))
+            return false
+        }
+        val consumed = totalSeeds.coerceAtMost(640)
+        // Remove seeds from inventory
+        var remaining = consumed
+        for (item in p.inventory.contents) {
+            if (item != null && item.type in seedTypes && remaining > 0) {
+                val take = item.amount.coerceAtMost(remaining)
+                item.amount -= take
+                remaining -= take
+            }
+        }
+        val durationSec = consumed / 2
+        val amp = if (lv >= 3) 2 else 1 // Haste II / III
+        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.HASTE, durationSec * 20, amp, false, true))
+        p.sendMessage(Component.text("§a✦ 植物遗传学：消耗${consumed}个种子，获得急迫${if(amp>=2) "III" else "II"} ${durationSec}秒"))
         return true
     }
 
-    /** 科学施肥: 骨粉效果 */
+    /** 科学施肥: 持续时间内骨粉不消耗 */
+    private val keXueShiFeiPlayers = mutableMapOf<java.util.UUID, Pair<Int, Long>>() // UUID -> (chance%, expiry)
+
     private fun executeKeXueShiFei(p: Player, s: SkillInstance, lv: Int): Boolean {
-        p.inventory.addItem(org.bukkit.inventory.ItemStack(org.bukkit.Material.BONE_MEAL, lv * 2))
-        p.sendMessage(Component.text("§a✦ 科学施肥：获得${lv*2}个骨粉"))
+        val (durationSec, chance) = when (lv) { 1 -> 20 to 10; 2 -> 25 to 20; 3 -> 30 to 30; else -> 20 to 10 }
+        keXueShiFeiPlayers[p.uniqueId] = chance to (System.currentTimeMillis() + durationSec * 1000L)
+        p.sendMessage(Component.text("§a✦ 科学施肥：持续${durationSec}秒，骨粉不消耗概率${chance}%"))
         return true
     }
 
-    /** 燃料管道: 熔炉燃烧 */
+    /** Returns save chance % if active, else 0 */
+    fun getKeXueShiFeiChance(player: Player): Int {
+        val (chance, expiry) = keXueShiFeiPlayers[player.uniqueId] ?: return 0
+        if (System.currentTimeMillis() > expiry) { keXueShiFeiPlayers.remove(player.uniqueId); return 0 }
+        return chance
+    }
+
+    /** 燃料管道: 周围熔炉不消耗燃料持续燃烧 */
+    data class RanLiaoData(val range: Double, val expiry: Long)
+    val ranLiaoGuanDaoPlayers = mutableMapOf<java.util.UUID, RanLiaoData>()
+
     private fun executeRanLiaoGuanDao(p: Player, s: SkillInstance, lv: Int): Boolean {
-        val duration = when (lv) { 1 -> 30; 2 -> 35; 3 -> 40; else -> 30 }
-        p.sendMessage(Component.text("§a✦ 燃料管道：周围熔炉保持燃烧，持续${duration}秒"))
+        val durationSec = when (lv) { 1 -> 30; 2 -> 35; 3 -> 40; else -> 30 }
+        val range = when (lv) { 1 -> 4.0; 2 -> 6.0; 3 -> 8.0; else -> 4.0 }
+        ranLiaoGuanDaoPlayers[p.uniqueId] = RanLiaoData(range, System.currentTimeMillis() + durationSec * 1000L)
+        p.sendMessage(Component.text("§a✦ 燃料管道：周围${range.toInt()}格熔炉不消耗燃料，持续${durationSec}秒"))
         return true
+    }
+
+    /** Called each tick: keep nearby furnaces burning without fuel */
+    fun tickRanLiaoGuanDao() {
+        val now = System.currentTimeMillis()
+        val expired = mutableListOf<java.util.UUID>()
+        for ((uuid, data) in ranLiaoGuanDaoPlayers) {
+            val player = org.bukkit.Bukkit.getPlayer(uuid)
+            if (player == null || !player.isOnline || now > data.expiry) {
+                expired.add(uuid)
+                continue
+            }
+            val range = data.range
+            for (x in -range.toInt()..range.toInt()) {
+                for (y in -2..2) {
+                    for (z in -range.toInt()..range.toInt()) {
+                        val block = player.location.clone().add(x.toDouble(), y.toDouble(), z.toDouble()).block
+                        if (block.type == org.bukkit.Material.FURNACE || block.type == org.bukkit.Material.BLAST_FURNACE) {
+                            val furnace = block.state as? org.bukkit.block.Furnace ?: continue
+                            furnace.burnTime = 200.toShort() // Start / keep burning
+                            furnace.update()
+                        }
+                    }
+                }
+            }
+        }
+        expired.forEach { ranLiaoGuanDaoPlayers.remove(it) }
     }
 
     /** 巧力用斧: 下次用斧破坏木方块不消耗耐久 */

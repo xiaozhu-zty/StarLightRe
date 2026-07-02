@@ -25,6 +25,7 @@ import com.waterful.project.career.command.ConfirmCommand
 import com.waterful.project.career.command.DelCareerCommand
 import com.waterful.project.career.command.ListeningCommand
 import com.waterful.project.career.command.ResonanceCommand
+import com.waterful.project.career.command.UnlockCommand
 import com.waterful.project.listeners.PlayerListener
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -67,6 +68,9 @@ class StarLightRe : JavaPlugin() {
         getCommand("listening")?.setExecutor(ListeningCommand())
         getCommand("confirm")?.setExecutor(ConfirmCommand())
         getCommand("clearcd")?.setExecutor(ClearCDCommand())
+        val unlockCmd = UnlockCommand()
+        getCommand("unlock")?.setExecutor(unlockCmd)
+        getCommand("unlock")?.tabCompleter = unlockCmd
 
         // Register listeners
         server.pluginManager.registerEvents(PlayerListener(), this)
@@ -85,6 +89,12 @@ class StarLightRe : JavaPlugin() {
 
         // Start kuangdeng (dynamic light) follow tick
         startKuangDengTick()
+
+        // Start fuel pipeline tick (keeps nearby furnaces burning without fuel)
+        startRanLiaoGuanDaoTick()
+
+        // Start investment vision expiry tick
+        startInvestmentTick()
 
         // Start auto-release tick (fires auto-cast skills when cooldowns are ready)
         startAutoReleaseTick()
@@ -112,17 +122,23 @@ class StarLightRe : JavaPlugin() {
                 val cp = com.waterful.project.career.manager.CareerManager.getPlayer(player) ?: continue
                 if (com.waterful.project.career.manager.CareerManager.hasBranch(cp,
                         com.waterful.project.career.model.Branch.FARMER_FISHERMAN)) {
+                    // Base: always Luck I (force=false: don't overwrite stronger Luck like 大洋眷顾)
                     player.addPotionEffect(org.bukkit.potion.PotionEffect(
-                        org.bukkit.potion.PotionEffectType.LUCK, 40, 0, false, false, true))
+                        org.bukkit.potion.PotionEffectType.LUCK, 40, 0, false, false, false))
+                    // Base: Conduit Power when in water
                     if (player.isInWater) {
                         player.addPotionEffect(org.bukkit.potion.PotionEffect(
                             org.bukkit.potion.PotionEffectType.CONDUIT_POWER, 40, 0, false, false, true))
                     }
-                    // 骇浪征服者: ocean + storm = resistance
-                    val biome = player.location.block.biome.toString()
-                    if (biome.contains("OCEAN") && !player.world.isClearWeather) {
-                        player.addPotionEffect(org.bukkit.potion.PotionEffect(
-                            org.bukkit.potion.PotionEffectType.RESISTANCE, 40, 1, false, false, true))
+                    // 骇浪征服者 (Eureka 0): passive — ocean + storm → Resistance II
+                    if (player.world.hasStorm() || player.world.isThundering) {
+                        val biome = player.location.block.biome.toString().uppercase()
+                        if (cp.chosenEurekas.containsKey(com.waterful.project.career.model.Branch.FARMER_FISHERMAN) &&
+                            cp.chosenEurekas[com.waterful.project.career.model.Branch.FARMER_FISHERMAN]!!.eurekaDef.id.contains("fisherman_eureka_0") &&
+                            biome.contains("OCEAN")) {
+                            player.addPotionEffect(org.bukkit.potion.PotionEffect(
+                                org.bukkit.potion.PotionEffectType.RESISTANCE, 40, 1, false, false, true))
+                        }
                     }
                 }
             }
@@ -135,15 +151,53 @@ class StarLightRe : JavaPlugin() {
         }, 5L, 5L) // Every 5 ticks for smooth following
     }
 
+    private fun startRanLiaoGuanDaoTick() {
+        server.scheduler.runTaskTimer(this, Runnable {
+            com.waterful.project.career.skill.SkillExecutor.tickRanLiaoGuanDao()
+        }, 10L, 10L) // Every 0.5s: refresh burn time for furnaces in range
+    }
+
+    private val autoCastFailNotified = mutableSetOf<String>() // "${uuid}_${skillId}"
+
+    private fun startInvestmentTick() {
+        server.scheduler.runTaskTimer(this, Runnable {
+            com.waterful.project.career.skill.EurekaEffectHandler.tickInvestmentVision()
+        }, 20L, 20L) // Every 1s: check for expired investment tracking
+    }
+
     private fun startAutoReleaseTick() {
         server.scheduler.runTaskTimer(this, Runnable {
             for (player in server.onlinePlayers) {
                 val cp = com.waterful.project.career.manager.CareerManager.getPlayer(player) ?: continue
                 val now = System.currentTimeMillis()
+
+                // --- Auto-release skills ---
                 for ((autoKey, enabled) in cp.autoCastSkills) {
                     if (!enabled) continue
                     if (!autoKey.endsWith("_auto")) continue
-                    // Parse branch and skill index from key: "WORKER_MINER_skill_1_auto"
+
+                    // Eureka auto-cast: key format "BRANCH_NAME_eureka_auto"
+                    if (autoKey.endsWith("_eureka_auto")) {
+                        val branchName = autoKey.removeSuffix("_eureka_auto")
+                        val branch = com.waterful.project.career.model.Branch.entries.find { it.name == branchName } ?: continue
+                        val eureka = cp.chosenEurekas[branch] ?: continue
+                        val eurekaId = eureka.eurekaDef.id
+                        val cdSeconds = eureka.eurekaDef.cooldownSeconds
+                        if (cdSeconds <= 0) continue
+                        if (cp.isOnCooldown(eurekaId, cdSeconds, now)) continue
+                        val fired = com.waterful.project.career.skill.EurekaEffectHandler.execute(eurekaId, player)
+                        if (fired) {
+                            autoCastFailNotified.remove("${player.uniqueId}_$eurekaId")
+                        } else {
+                            val tag = "${player.uniqueId}_$eurekaId"
+                            if (tag !in autoCastFailNotified) {
+                                autoCastFailNotified.add(tag)
+                            }
+                        }
+                        continue
+                    }
+
+                    // Skill auto-cast: key format "BRANCH_NAME_skill_N_auto"
                     val parts = autoKey.removeSuffix("_auto").split("_")
                     if (parts.size < 4) continue
                     val branchName = parts[0] + "_" + parts[1]
@@ -152,14 +206,20 @@ class StarLightRe : JavaPlugin() {
                     val skill = cp.getSkill(branch, skillIdx) ?: continue
                     if (skill.currentLevel < 1) continue
                     val skillId = "${branch.name.lowercase()}_skill_$skillIdx"
-                    // Check cooldown (get cooldown for current level)
                     val cdSeconds = skill.skillDef.getCooldown(skill.currentLevel)
                     if (cdSeconds <= 0) continue
                     if (cp.isOnCooldown(skillId, cdSeconds, now)) continue
-                    // Fire the skill silently (auto-release: no chat spam for next-op skills)
                     val fired = com.waterful.project.career.skill.SkillExecutor.executeSkill(player, skill, silent = true)
                     if (fired) {
                         cp.setCooldown(skillId, now)
+                        autoCastFailNotified.remove("${player.uniqueId}_$skillId")
+                    } else {
+                        // Condition not met — don't consume CD, show message only once
+                        val tag = "${player.uniqueId}_$skillId"
+                        if (tag !in autoCastFailNotified) {
+                            player.sendMessage("§7[自动释放] ${skill.skillDef.name}：条件不满足，等待中…")
+                            autoCastFailNotified.add(tag)
+                        }
                     }
                 }
             }

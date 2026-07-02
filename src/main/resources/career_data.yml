@@ -15,38 +15,38 @@ careers:
             type: PASSIVE
             icon: "PAPER"
             levels:
-              - "打火石时必定成功；减少20%爆炸伤害。"
-              - "获得掉落物"
-              - "获得掉落物"
+              - "破坏装饰性方块可得掉落物"
+              - "破坏染色方块可得掉落物"
+              - "破坏各类玻璃可得掉落物"
           - id: "architect_structure_skill_1"
             name: "识色敏锐"
             type: ACTIVE
             icon: "RED_DYE"
-            cooldown: [20, 20, 20]
+            cooldown: [20, 15, 10]
             levels:
-              - "合成染料时(CD:20秒)额外获得1个同种染料"
-              - "合成染料时(CD:15秒)额外获得1个同种染料"
-              - "合成染料时(CD:15秒)额外获得2个同种染料"
+              - "下次合成染色方块时额外获得1个"
+              - "CD-5；下次合成染色方块时额外获得1个"
+              - "CD-10；下次合成染色方块时额外获得2个"
           - id: "architect_structure_skill_2"
             name: "凌空创想"
             type: ACTIVE
             icon: "WHITE_DYE"
             cooldown: [300, 300, 300]
             levels:
-              - "持续3分钟。获得速度I，在脚手架上行动时持续获得3秒的速度II、跳跃提升I、抗性提升I"
-              - "持续4分钟。获得速度I，在脚手架上行动时持续获得3秒的速度II、跳跃提升II、抗性提升II"
-              - "持续5分钟。获得速度II、抗性提升I，在脚手架上行动时持续获得3秒的速度III、跳跃提升III、抗性提升III"
+              - "持续3分钟。获得速度I；在脚手架上时额外获得速度II、跳跃提升I、抗性提升I"
+              - "持续4分钟。获得速度I；在脚手架上时额外获得速度II、跳跃提升II、抗性提升II"
+              - "持续5分钟。获得速度II、抗性提升I；在脚手架上时额外获得速度III、跳跃提升III、抗性提升III"
         eurekas:
           - id: "architect_structure_eureka_0"
             name: "奇珍颜料"
             icon: "PURPLE_DYE"
-            cooldown: 60
-            description: "1个相应的染料"
+            cooldown: 0
+            description: "破坏染色方块时有20%概率获得对应染料"
           - id: "architect_structure_eureka_1"
             name: "凝固剂"
             icon: "SLIME_BALL"
-            cooldown: 100
-            description: "混凝土粉末→（相应颜色的）混凝土"
+            cooldown: 0
+            description: "解锁混凝土粉末→混凝土合成表"
           - id: "architect_structure_eureka_2"
             name: "主世界的建造者"
             icon: "GRASS_BLOCK"
@@ -318,21 +318,20 @@ careers:
         eurekas:
           - id: "chef_butcher_eureka_0"
             name: "血腥屠宰者"
-            type: ACTIVE
             icon: "GOLDEN_AXE"
             cooldown: 0
-            description: "对准某一生物（不能是玩家）使用，使该生物获得60秒的发光和虚弱II；若在期间击杀该生物，则获得25经验值"
+            description: "使用斧时伤害+25%；若目标无护甲，则额外造成6点伤害"
           - id: "chef_butcher_eureka_1"
             name: "放血"
             icon: "CHICKEN"
             cooldown: 0
-            description: "1个对应的生肉"
+            description: "使用斧对产肉动物暴击时，施加中毒I；周围4格内中毒且生命不足一半的产肉动物立即死亡并额外掉落生肉"
           - id: "chef_butcher_eureka_2"
             name: "追猎"
             type: ACTIVE
             icon: "IRON_HORSE_ARMOR"
-            cooldown: 120
-            description: "+6"
+            cooldown: 180
+            description: "对准视线中的生物（不能是玩家）使用，使其获得60秒的发光和虚弱II；若在期间击杀该生物，则获得25经验值"
       # --- 主厨 ---
       CHEF_MASTER:
         skills:
@@ -364,12 +363,12 @@ careers:
               - "补充：附魔金苹果时：使自己和周围8格内所有非敌对玩家获得6饥饿值+8生命值+30秒抗火和抗性提升I"
         eurekas:
           - id: "chef_master_eureka_0"
-            name: "地狱厨房"
+            name: "配方传承"
             icon: "COOKED_MUTTON"
             cooldown: 0
             description: "8金块+1苹果→附魔金苹果"
           - id: "chef_master_eureka_1"
-            name: "配方传承"
+            name: "地狱厨房"
             type: ACTIVE
             icon: "ENCHANTED_GOLDEN_APPLE"
             cooldown: 0
@@ -605,8 +604,8 @@ careers:
           - id: "farmer_fisherman_eureka_0"
             name: "骇浪征服者"
             icon: "TRIDENT"
-            cooldown: 1800
-            description: "在降水或雷暴天气时，若处于海洋生物群系，则获得抗性提升II"
+            cooldown: 0
+            description: "在降水或雷暴天气时，若处于海洋生物群系，则持续获得抗性提升II"
           - id: "farmer_fisherman_eureka_1"
             name: "授人以渔"
             icon: "FISHING_ROD"
@@ -626,33 +625,33 @@ careers:
             type: PASSIVE
             icon: "WHEAT_SEEDS"
             levels:
-              - "1个相应作物"
-              - "1个相应作物"
-              - "1个相应作物"
+              - "收割作物15%额外获得（与基效果叠加为25%）"
+              - "收割作物20%额外获得（与基效果叠加为30%）"
+              - "收割作物25%额外获得（与基效果叠加为35%）"
           - id: "farmer_botanist_skill_1"
             name: "科学施肥"
             type: ACTIVE
             icon: "BONE_MEAL"
-            cooldown: [540, 540, 540]
+            cooldown: [30, 30, 30]
             levels:
-              - "骨粉"
-              - "骨粉"
-              - "骨粉"
+              - "持续20秒，骨粉不消耗概率10%"
+              - "持续25秒，骨粉不消耗概率20%"
+              - "持续30秒，骨粉不消耗概率30%"
           - id: "farmer_botanist_skill_2"
             name: "植物遗传学"
             type: ACTIVE
             icon: "OAK_SAPLING"
-            cooldown: [210, 210, 210]
+            cooldown: [600, 600, 540]
             levels:
-              - "秒的急迫II"
-              - "此技能的CD-60"
-              - "秒的急迫III"
+              - "消耗背包内x个种子（≤640），获得x/2秒急迫II"
+              - "消耗背包内x个种子（≤640），获得x/2秒急迫II"
+              - "消耗背包内x个种子（≤640），获得x/2秒急迫III；CD-60"
         eurekas:
           - id: "farmer_botanist_eureka_0"
             name: "于荫求果"
             icon: "APPLE"
             cooldown: 0
-            description: "苹果"
+            description: "破坏树叶时有10%概率额外获得一个苹果"
           - id: "farmer_botanist_eureka_1"
             name: "终极奉献"
             icon: "DISPENSER"
@@ -702,12 +701,12 @@ careers:
             name: "现代化牧业"
             icon: "SPAWNER"
             cooldown: 0
-            description: "破坏刷怪笼时获得若干个对应的刷怪蛋"
+            description: "可以放置发射器"
           - id: "farmer_rancher_eureka_2"
             name: "克隆技术"
             icon: "TURTLE_EGG"
             cooldown: 0
-            description: "（暂不实装，待更新）"
+            description: "破坏刷怪笼时获得若干对应的刷怪蛋"
       # --- 行商 ---
       FARMER_MERCHANT:
         skills:
@@ -742,17 +741,18 @@ careers:
             name: "同行浪迹"
             icon: "WANDERING_TRADER_SPAWN_EGG"
             cooldown: 0
-            description: "周围16格内的流浪商人获得发光效果，与流浪商人的前2次交易不消耗绿宝石"
+            description: "周围16格内的流浪商人获得发光效果；与流浪商人的前2次交易不消耗绿宝石"
           - id: "farmer_merchant_eureka_1"
             name: "路见不平"
             icon: "IRON_SWORD"
             cooldown: 0
-            description: "；袭击结束后获得的村庄英雄等级+1"
+            description: "处于袭击中时，使用剑/斧/弓/弩全额伤害；袭击结束后获得的村庄英雄等级+1"
           - id: "farmer_merchant_eureka_2"
             name: "投资远见"
+            type: ACTIVE
             icon: "EMERALD_BLOCK"
-            cooldown: 0
-            description: "的绿宝石"
+            cooldown: 1800
+            description: "持续5分钟。记录期间购买花费的绿宝石数x，结束后随机获得0.5x~1.75x绿宝石"
 
   # ===== 工人 Worker =====
   WORKER:

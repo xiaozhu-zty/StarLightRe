@@ -43,3 +43,6 @@ commands:
   clearcd:
     description: "清除所有技能冷却"
     usage: "/clearcd"
+  unlock:
+    description: "解除或恢复玩家的6分支3职业限制 (OP)"
+    usage: "/unlock <玩家名>"

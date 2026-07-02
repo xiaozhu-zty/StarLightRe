@@ -79,7 +79,7 @@ object CareerGUI {
                 if (cp.selectedClasses.contains(clazz)) {
                     viewingClass[player.uniqueId] = clazz
                     refresh(player)
-                } else if (!cp.isCareerSelected) {
+                } else if (!cp.isCareerSelected || cp.unlocked) {
                     CareerManager.selectThirdClass(player, clazz)
                     refresh(player)
                 }
@@ -141,7 +141,7 @@ object CareerGUI {
                 desc.add(Component.text("右击打开分支详情", NamedTextColor.GRAY))
             } else if (selected) {
                 desc.add(Component.text("已选择 · 点击查看分支", NamedTextColor.GREEN))
-            } else if (!cp.isCareerSelected) {
+            } else if (!cp.isCareerSelected || cp.unlocked) {
                 desc.add(Component.text("点击选择此职业", NamedTextColor.YELLOW))
             }
             desc.addAll(IconFactory.wrapLore(clazz.description, NamedTextColor.GRAY))

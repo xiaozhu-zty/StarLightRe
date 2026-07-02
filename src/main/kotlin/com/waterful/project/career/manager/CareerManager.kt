@@ -75,7 +75,7 @@ object CareerManager {
     fun selectThirdClass(player: Player, chosen: CareerClass): Boolean {
         val cp = getPlayer(player) ?: return false
 
-        if (cp.isCareerSelected) {
+        if (cp.isCareerSelected && !cp.unlocked) {
             player.sendMessage("§c你已经完成了职业选择！")
             return false
         }
@@ -182,6 +182,10 @@ object CareerManager {
 
         // Clear all active potion effects when forgetting a branch
         player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
+
+        // Clear all skill tracking data for this player
+        com.waterful.project.career.skill.SkillExecutor.clearPlayerTracking(player.uniqueId)
+        com.waterful.project.career.skill.EurekaEffectHandler.clearPlayerTracking(player.uniqueId)
 
         player.sendMessage("§a✦ 已遗忘分支：${branch.displayName}（花费${cost}技能点）")
         return true

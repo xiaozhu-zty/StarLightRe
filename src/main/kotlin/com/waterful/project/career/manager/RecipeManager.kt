@@ -91,6 +91,30 @@ object RecipeManager {
             mapOf('C' to Material.COPPER_INGOT, 'S' to Material.STICK)
         )
 
+        // === Architect Structure Eureka: 凝固剂 — concrete powder → concrete (all 16 colors) ===
+        val concreteMap = mapOf(
+            Material.WHITE_CONCRETE_POWDER to Material.WHITE_CONCRETE,
+            Material.ORANGE_CONCRETE_POWDER to Material.ORANGE_CONCRETE,
+            Material.MAGENTA_CONCRETE_POWDER to Material.MAGENTA_CONCRETE,
+            Material.LIGHT_BLUE_CONCRETE_POWDER to Material.LIGHT_BLUE_CONCRETE,
+            Material.YELLOW_CONCRETE_POWDER to Material.YELLOW_CONCRETE,
+            Material.LIME_CONCRETE_POWDER to Material.LIME_CONCRETE,
+            Material.PINK_CONCRETE_POWDER to Material.PINK_CONCRETE,
+            Material.GRAY_CONCRETE_POWDER to Material.GRAY_CONCRETE,
+            Material.LIGHT_GRAY_CONCRETE_POWDER to Material.LIGHT_GRAY_CONCRETE,
+            Material.CYAN_CONCRETE_POWDER to Material.CYAN_CONCRETE,
+            Material.PURPLE_CONCRETE_POWDER to Material.PURPLE_CONCRETE,
+            Material.BLUE_CONCRETE_POWDER to Material.BLUE_CONCRETE,
+            Material.BROWN_CONCRETE_POWDER to Material.BROWN_CONCRETE,
+            Material.GREEN_CONCRETE_POWDER to Material.GREEN_CONCRETE,
+            Material.RED_CONCRETE_POWDER to Material.RED_CONCRETE,
+            Material.BLACK_CONCRETE_POWDER to Material.BLACK_CONCRETE
+        )
+        concreteMap.forEach { (powder, concrete) ->
+            registerShapeless(plugin, "structure_concrete_${powder.name.lowercase()}", concrete, 1,
+                powder to 1)
+        }
+
         plugin.logger.info("[StarLightRe] RecipeManager: registered ${registeredKeys.size} eureka recipes")
     }
 

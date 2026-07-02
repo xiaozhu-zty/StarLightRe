@@ -40,8 +40,11 @@ data class CareerPlayer(
     /** Get total number of unlocked branches across all classes */
     fun getTotalUnlockedBranches(): Int = unlockedBranches.size
 
-    /** Check if player can unlock more branches (max 6) */
-    fun canUnlockMoreBranches(): Boolean = unlockedBranches.size < 6
+    /** Whether player has bypassed career/branch limits (set via /unlock) */
+    var unlocked: Boolean = false
+
+    /** Check if player can unlock more branches (max 6, or unlimited if unlocked) */
+    fun canUnlockMoreBranches(): Boolean = unlocked || unlockedBranches.size < 6
 
     /** Get skill instances for a branch */
     fun getSkills(branch: Branch): List<SkillInstance> =

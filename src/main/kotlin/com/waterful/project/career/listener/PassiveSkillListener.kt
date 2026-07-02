@@ -84,18 +84,114 @@ class PassiveSkillListener : Listener {
             val mat = if (level >= 3) cookedMeat[event.entityType] else rawMeat[event.entityType]
             mat?.let { event.entity.world.dropItemNaturally(event.entity.location, ItemStack(it, 1)) }
         }
+
+        // Eureka 2 (追猎): check kill reward
+        com.waterful.project.career.skill.EurekaEffectHandler.onPursuitKill(event.entity, killer)
     }
 
-    // ===== CHEF_MASTER: food effects =====
+    // ===== CHEF_MASTER: food effects + Skill 1 (奇味异珍) + Skill 2 (镀金美馔) =====
 
     @EventHandler
     fun onPlayerEat(event: PlayerItemConsumeEvent) {
         val p = event.player
         if (!p.hasBranch(Branch.CHEF_MASTER)) return
+        val food = event.item.type
 
-        if (event.item.type.isEdible) p.foodLevel = (p.foodLevel + 1).coerceAtMost(20)
-        if (event.item.type == Material.GOLDEN_APPLE || event.item.type == Material.ENCHANTED_GOLDEN_APPLE) {
+        // Base passive: +1 food level for any edible
+        if (food.isEdible) p.foodLevel = (p.foodLevel + 1).coerceAtMost(20)
+        if (food == Material.GOLDEN_APPLE || food == Material.ENCHANTED_GOLDEN_APPLE) {
             p.foodLevel = 20; p.saturation = 20f
+        }
+
+        // ---- Skill 1: 奇味异珍 (peek first, consume only on matching food) ----
+        val qiWeiLv = com.waterful.project.career.skill.SkillExecutor.peekQiWeiYiZhen(p)
+        if (qiWeiLv > 0) {
+            var consumed = false
+            when (food) {
+                Material.CHORUS_FRUIT -> {
+                    consumed = true
+                    p.foodLevel = (p.foodLevel + 4).coerceAtMost(20)
+                    val dir = p.location.direction.normalize()
+                    val dist = 3 + (0..5).random()
+                    val target = p.location.clone().add(dir.multiply(dist.toDouble()))
+                    target.y = target.y.coerceIn(p.world.minHeight.toDouble(), p.world.maxHeight.toDouble() - 1)
+                    if (target.block.type.isSolid) target.y = p.location.y
+                    p.teleport(target)
+                    p.sendMessage("§a✦ 奇味异珍·紫颂果：恢复4饥饿 + 传送")
+                }
+                Material.GOLDEN_CARROT -> {
+                    consumed = true
+                    p.foodLevel = (p.foodLevel + 2).coerceAtMost(20)
+                    for (nearby in p.location.getNearbyPlayers(4.0)) {
+                        if (nearby != p) nearby.foodLevel = (nearby.foodLevel + 2).coerceAtMost(20)
+                    }
+                    p.sendMessage("§a✦ 奇味异珍·金胡萝卜：恢复2饥饿（周围4格分享）")
+                }
+                Material.GLOW_BERRIES -> {
+                    if (qiWeiLv >= 2) {
+                        consumed = true
+                        p.foodLevel = (p.foodLevel + 2).coerceAtMost(20)
+                        p.addPotionEffect(PotionEffect(PotionEffectType.GLOWING, 30 * 20, 0, false, true))
+                        p.addPotionEffect(PotionEffect(PotionEffectType.SPEED, 30 * 20, 1, false, true))
+                        p.sendMessage("§a✦ 奇味异珍·发光浆果：恢复2饥饿 + 发光 + 速度II 30秒")
+                    }
+                }
+                Material.POISONOUS_POTATO -> {
+                    if (qiWeiLv >= 3) {
+                        consumed = true
+                        p.foodLevel = (p.foodLevel + 2).coerceAtMost(20)
+                        p.removePotionEffect(PotionEffectType.POISON)
+                        p.inventory.addItem(org.bukkit.inventory.ItemStack(Material.POTATO, 3))
+                        p.sendMessage("§a✦ 奇味异珍·毒马铃薯：恢复2饥饿 + 解毒 + 3个马铃薯")
+                    }
+                }
+                else -> {} // Not a matching food → flag stays active
+            }
+            if (consumed) com.waterful.project.career.skill.SkillExecutor.consumeQiWeiYiZhen(p)
+        }
+
+        // ---- Skill 2: 镀金美馔 (peek first, consume only on golden food) ----
+        val duJinLv = com.waterful.project.career.skill.SkillExecutor.peekDuJinMeiZhuan(p)
+        if (duJinLv > 0) {
+            val isGoldenFood = food == Material.GOLDEN_CARROT || food == Material.GOLDEN_APPLE || food == Material.ENCHANTED_GOLDEN_APPLE
+            if (isGoldenFood) {
+                val nonHostile = { pl: org.bukkit.entity.Player -> pl.gameMode != org.bukkit.GameMode.SPECTATOR }
+                when (food) {
+                    Material.GOLDEN_CARROT -> {
+                        for (nearby in p.location.getNearbyPlayers(4.0)) {
+                            if (nonHostile(nearby)) nearby.foodLevel = (nearby.foodLevel + 2).coerceAtMost(20)
+                        }
+                        p.sendMessage("§a✦ 镀金美馔·金胡萝卜：周围玩家恢复2饥饿")
+                    }
+                    Material.GOLDEN_APPLE -> {
+                        if (duJinLv >= 2) {
+                            for (nearby in p.location.getNearbyPlayers(4.0)) {
+                                if (nonHostile(nearby)) {
+                                    nearby.foodLevel = (nearby.foodLevel + 4).coerceAtMost(20)
+                                    nearby.health = (nearby.health + 2.0).coerceAtMost(nearby.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0)
+                                }
+                            }
+                            p.sendMessage("§a✦ 镀金美馔·金苹果：周围玩家恢复4饥饿 + 2生命")
+                        }
+                    }
+                    Material.ENCHANTED_GOLDEN_APPLE -> {
+                        if (duJinLv >= 3) {
+                            val range = 8.0
+                            for (nearby in p.location.getNearbyPlayers(range)) {
+                                if (nonHostile(nearby)) {
+                                    nearby.foodLevel = (nearby.foodLevel + 6).coerceAtMost(20)
+                                    nearby.health = (nearby.health + 8.0).coerceAtMost(nearby.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 20.0)
+                                    nearby.addPotionEffect(PotionEffect(PotionEffectType.FIRE_RESISTANCE, 30 * 20, 0, false, true))
+                                    nearby.addPotionEffect(PotionEffect(PotionEffectType.RESISTANCE, 30 * 20, 0, false, true))
+                                }
+                            }
+                            p.sendMessage("§a✦ 镀金美馔·附魔金苹果：周围8格玩家恢复6饥饿 + 8生命 + 30秒抗火/抗性I")
+                        }
+                    }
+                    else -> {}
+                }
+                com.waterful.project.career.skill.SkillExecutor.consumeDuJinMeiZhuan(p)
+            }
         }
     }
 
@@ -224,6 +320,8 @@ class PassiveSkillListener : Listener {
             p.giveItem(ItemStack(Material.EMERALD, refund))
             p.msgSuccess("商业谈判生效，返还了 $refund 颗绿宝石！")
         }
+        // 投资远见 (Eureka 2): track emerald spending
+        com.waterful.project.career.skill.EurekaEffectHandler.onInvestmentTrade(p, emeraldCost)
     }
 
     // ===== WORKER_LUMBERJACK eureka 2: nether stem extra =====
@@ -240,22 +338,67 @@ class PassiveSkillListener : Listener {
         }
     }
 
-    // ===== CHEF_BAKER skill 0: bake success rate =====
+    // ===== CHEF_BAKER skill 0: bake success rate + Skill 1: 文火慢炖 =====
 
     private val bakedGoods = setOf(Material.BREAD, Material.CAKE, Material.COOKIE, Material.PUMPKIN_PIE)
+    private val stews = setOf(Material.MUSHROOM_STEW, Material.BEETROOT_SOUP, Material.RABBIT_STEW, Material.SUSPICIOUS_STEW)
 
     @EventHandler
     fun onCraftBakedGoods(event: CraftItemEvent) {
         val p = event.whoClicked as? Player ?: return
         if (!p.hasBranch(Branch.CHEF_BAKER)) return
-        val lv = p.skillLevel(Branch.CHEF_BAKER, 0)
-        if (lv < 1) return
         val result = event.recipe?.result ?: return
-        if (result.type !in bakedGoods) return
-        if (lv >= 2) return // Lv.2+ guaranteed
-        if (!p.roll(90, "预热烤箱·Lv.1 ${result.type.name}")) {
-            event.isCancelled = true
-            p.msgFail("合成失败！预热烤箱技能未触发成功。")
+        val resultType = result.type
+        val isBakerItem = resultType in bakedGoods || resultType in stews
+
+        // ---- Skill 0: 预热烤箱 (bake success rate, per output item) ----
+        if (isBakerItem) {
+            val ovenLv = p.skillLevel(Branch.CHEF_BAKER, 0)
+            val outputAmount = result.amount
+            // Lv.1: 90% success. Judge each output item separately
+            if (ovenLv == 1) {
+                var successCount = 0
+                repeat(outputAmount) {
+                    if (p.roll(90, "预热烤箱·Lv.1 ${resultType.name}")) successCount++
+                }
+                if (successCount == 0) {
+                    event.isCancelled = true
+                    val inv = event.inventory as? org.bukkit.inventory.CraftingInventory
+                    inv?.matrix?.forEach { it?.amount = (it.amount - 1).coerceAtLeast(0) }
+                    p.msgFail("合成失败！预热烤箱技能未触发成功（原料已消耗）。")
+                    return
+                }
+                if (successCount < outputAmount) {
+                    // Partial success: cancel event, manually give successful items
+                    event.isCancelled = true
+                    val inv = event.inventory as? org.bukkit.inventory.CraftingInventory
+                    inv?.matrix?.forEach { it?.amount = (it.amount - 1).coerceAtLeast(0) }
+                    p.inventory.addItem(org.bukkit.inventory.ItemStack(resultType, successCount))
+                    p.sendMessage("§e预热烤箱·Lv.1：${outputAmount}个中合成了${successCount}个${resultType.name}")
+                    return
+                }
+            }
+            // Lv.2+ guaranteed, Lv.0 no baker skill → normal vanilla behavior
+        }
+
+        // ---- Skill 1: 文火慢炖 (extra stew on next craft) ----
+        if (resultType in stews) {
+            val stewLv = com.waterful.project.career.skill.SkillExecutor.onWenHuoManDunCraft(p)
+            if (stewLv > 0) {
+                val extra = when {
+                    stewLv >= 3 && resultType == Material.SUSPICIOUS_STEW -> {
+                        // 2 random suspicious stews
+                        repeat(2) { p.inventory.addItem(org.bukkit.inventory.ItemStack(Material.SUSPICIOUS_STEW, 1)) }
+                        "2个随机谜之炖菜"
+                    }
+                    else -> {
+                        val randomStew = stews.filter { it != Material.SUSPICIOUS_STEW }.random()
+                        p.inventory.addItem(org.bukkit.inventory.ItemStack(randomStew, 1))
+                        "1个额外汤煲"
+                    }
+                }
+                p.sendMessage("§a✦ 文火慢炖：额外获得$extra")
+            }
         }
     }
 
@@ -266,11 +409,14 @@ class PassiveSkillListener : Listener {
         val damager = event.damager as? Player ?: return
         if (!damager.holding(Material.BREAD)) return
         if (!damager.hasBranch(Branch.CHEF_BAKER) || !damager.hasEureka(Branch.CHEF_BAKER, 0)) return
-        if (!damager.roll(20, "法棍 — 真实伤害")) return
         val target = event.entity as? LivingEntity ?: return
-        target.realDamage(2.0, damager)
-        target.effect(PotionEffectType.NAUSEA, 15, 1)
-        target.effect(PotionEffectType.DARKNESS, 5, 0)
+        // Always apply: 15s nausea II + 5s darkness
+        target.effect(PotionEffectType.NAUSEA, 15, 1)   // amp 1 = Nausea II
+        target.effect(PotionEffectType.DARKNESS, 5, 0)   // amp 0 = Darkness I
+        // 20% chance: 2 true damage (bypasses armor)
+        if (damager.roll(20, "法棍 — 真实伤害(20%)")) {
+            target.realDamage(2.0, damager)
+        }
     }
 
     // ===== CHEF_BAKER eureka 2: lucky cookie =====
@@ -562,7 +708,7 @@ class PassiveSkillListener : Listener {
         }
     }
 
-    // ===== FARMER_BOTANIST skill 0 (合理密植): crop harvest bonus =====
+    // ===== FARMER_BOTANIST skill 0 (合理密植): crop harvest bonus (lvl.0 = 10%) =====
 
     private val crops = setOf(
         Material.WHEAT, Material.CARROTS, Material.POTATOES, Material.BEETROOTS,
@@ -573,21 +719,99 @@ class PassiveSkillListener : Listener {
     fun onHarvestCrop(event: org.bukkit.event.block.BlockBreakEvent) {
         val p = event.player
         if (!p.hasBranch(Branch.FARMER_BOTANIST)) return
+        if (event.block.type !in crops) return
         val lv = p.skillLevel(Branch.FARMER_BOTANIST, 0)
-        if (lv < 1 || event.block.type !in crops) return
-        // Drop one extra item
-        val drops = event.block.getDrops(p.inventory.itemInMainHand, p)
-        drops.forEach { drop -> event.block.world.dropItemNaturally(event.block.location, drop) }
+        // lvl.0: base 10%. lvl.1: 15%. lvl.2: 20%. lvl.3: 25%
+        val chance = when (lv) { 0 -> 10; 1 -> 15; 2 -> 20; 3 -> 25; else -> 10 }
+        if (p.roll(chance, "合理密植·Lv.$lv 额外收获($chance%)")) {
+            val drops = event.block.getDrops(p.inventory.itemInMainHand, p)
+            drops.forEach { drop -> event.block.world.dropItemNaturally(event.block.location, drop) }
+        }
     }
 
-    // ===== ARCHITECT_STRUCTURE skill 1 (识色敏锐): dye crafting bonus (PASSIVE with CD) =====
+    // ===== FARMER_BOTANIST skill 1 (科学施肥): bone meal save chance =====
 
-    private val dyeResults = setOf(
-        Material.RED_DYE, Material.GREEN_DYE, Material.BLUE_DYE, Material.YELLOW_DYE,
-        Material.PURPLE_DYE, Material.CYAN_DYE, Material.LIGHT_GRAY_DYE, Material.GRAY_DYE,
-        Material.PINK_DYE, Material.LIME_DYE, Material.ORANGE_DYE, Material.MAGENTA_DYE,
-        Material.LIGHT_BLUE_DYE, Material.BROWN_DYE, Material.BLACK_DYE, Material.WHITE_DYE
-    )
+    @EventHandler
+    fun onBoneMealUse(event: org.bukkit.event.player.PlayerInteractEvent) {
+        if (event.action != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return
+        val p = event.player
+        if (p.inventory.itemInMainHand.type != Material.BONE_MEAL) return
+        val chance = com.waterful.project.career.skill.SkillExecutor.getKeXueShiFeiChance(p)
+        if (chance <= 0) return
+        if (p.roll(chance, "科学施肥·骨粉不消耗($chance%)")) {
+            // Refund the bone meal after use
+            org.bukkit.Bukkit.getScheduler().runTaskLater(
+                org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe")!!,
+                Runnable { p.inventory.addItem(org.bukkit.inventory.ItemStack(Material.BONE_MEAL, 1)) },
+                1L
+            )
+        }
+    }
+
+    // ===== FARMER_BOTANIST eureka 0 (于荫求果): 10% apple from leaves =====
+
+    private val leaves = Material.entries.filter { it.name.contains("LEAVES") }.toSet()
+
+    @EventHandler
+    fun onBreakLeaves(event: org.bukkit.event.block.BlockBreakEvent) {
+        val p = event.player
+        if (!p.hasEureka(Branch.FARMER_BOTANIST, 0)) return
+        if (event.block.type !in leaves) return
+        if (!p.roll(10, "于荫求果·苹果")) return
+        event.block.world.dropItemNaturally(event.block.location, org.bukkit.inventory.ItemStack(Material.APPLE, 1))
+    }
+
+    // ===== FARMER_BOTANIST eureka 1 (终极奉献): broken netherite hoe → new one =====
+
+    @EventHandler
+    fun onHoeBreak(event: org.bukkit.event.player.PlayerItemBreakEvent) {
+        val p = event.player
+        if (!p.hasEureka(Branch.FARMER_BOTANIST, 1)) return
+        if (event.brokenItem.type != Material.NETHERITE_HOE) return
+        p.inventory.addItem(org.bukkit.inventory.ItemStack(Material.NETHERITE_HOE, 1))
+        p.sendMessage("§a✦ 终极奉献：获得一把新的下界合金锄")
+    }
+
+    // ===== FARMER_RANCHER eureka 0 (游牧习俗): plains + milk → instant health II =====
+
+    @EventHandler
+    fun onMilkDrink(event: PlayerItemConsumeEvent) {
+        val p = event.player
+        if (!p.hasEureka(Branch.FARMER_RANCHER, 0)) return
+        if (event.item.type != Material.MILK_BUCKET) return
+        val biomeName = p.location.block.biome.toString().uppercase()
+        if (!biomeName.contains("PLAINS")) return
+        p.addPotionEffect(PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, 1, false, true))
+        p.sendMessage("§a✦ 游牧习俗：平原饮用奶获得瞬间治疗II")
+    }
+
+    // ===== FARMER_RANCHER eureka 2 (克隆技术): break spawner → spawn eggs =====
+
+    @EventHandler
+    fun onBreakSpawner(event: org.bukkit.event.block.BlockBreakEvent) {
+        val p = event.player
+        if (!p.hasEureka(Branch.FARMER_RANCHER, 2)) return
+        if (event.block.type != Material.SPAWNER) return
+        val spawner = event.block.state as? org.bukkit.block.CreatureSpawner ?: return
+        val spawnedType = spawner.spawnedType ?: return
+        val eggMaterial = Material.entries.find { it.name == "${spawnedType.name}_SPAWN_EGG" }
+            ?: return
+        val count = (1..3).random()
+        event.block.world.dropItemNaturally(event.block.location, org.bukkit.inventory.ItemStack(eggMaterial, count))
+        p.sendMessage("§a✦ 克隆技术：获得${count}个${spawnedType.name}刷怪蛋")
+    }
+
+    // ===== ARCHITECT_STRUCTURE skill 1 (识色敏锐): dyed block crafting bonus with CD =====
+
+    private val dyedBlockResults: Set<Material> by lazy {
+        Material.entries.filter { mat ->
+            mat.isBlock && (mat.name.contains("CONCRETE") || mat.name.contains("TERRACOTTA") ||
+                mat.name.contains("WOOL") || mat.name.contains("STAINED_GLASS") ||
+                mat.name.contains("GLAZED") || mat.name.contains("CANDLE") ||
+                mat.name.endsWith("_BED") || mat.name.contains("SHULKER_BOX") ||
+                mat.name.endsWith("_BANNER") || mat.name.endsWith("_CARPET"))
+        }.toSet()
+    }
 
     @EventHandler
     fun onCraftDye(event: org.bukkit.event.inventory.CraftItemEvent) {
@@ -596,12 +820,12 @@ class PassiveSkillListener : Listener {
         val lv = p.skillLevel(Branch.ARCHITECT_STRUCTURE, 1)
         if (lv < 1) return
         val result = event.recipe?.result ?: return
-        if (result.type !in dyeResults) return
+        if (result.type !in dyedBlockResults) return
 
         DebugManager.logState(p, "识色敏锐 — 合成${result.type.name}")
         val cp = p.career() ?: return
         val now = System.currentTimeMillis()
-        val cdSeconds = com.waterful.project.career.data.CareerDataLoader.getSkill("architect_structure_skill_1")?.getCooldown(lv) ?: 20
+        val cdSeconds = com.waterful.project.career.data.CareerDataLoader.getSkill("architect_structure_skill_1")?.getCooldown(lv) ?: (24 - lv * 5) // [20,15,10]
         if (cp.isOnCooldown("architect_structure_skill_1", cdSeconds, now)) {
             DebugManager.logState(p, "识色敏锐 — CD冷却中(${cp.getRemainingCooldown("architect_structure_skill_1", cdSeconds, now)}秒)")
             return
@@ -799,16 +1023,15 @@ class PassiveSkillListener : Listener {
 
     // FARMER_FISHERMAN base effects: handled by StarLightRe.startFishermanTick (20tick repeating task)
 
-    // ===== FARMER_FISHERMAN eureka 2 (凝望反制): guardian damage reduction =====
+    // ===== FARMER_FISHERMAN eureka 2 (凝望反制): guardian damage reduction (30s window) =====
     @EventHandler
     fun onGuardianDamage(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
         val p = event.entity as? Player ?: return
         if (!p.hasBranch(Branch.FARMER_FISHERMAN)) return
-        val has = p.career()?.chosenEurekas?.get(Branch.FARMER_FISHERMAN)?.eurekaDef?.id?.contains("fisherman_eureka_2") == true
-        if (!has) return
-        if (event.damager is org.bukkit.entity.Guardian || event.damager is org.bukkit.entity.ElderGuardian) {
-            event.damage = maxOf(event.damage - 6.0, 0.1)
-        }
+        if (event.damager !is org.bukkit.entity.Guardian && event.damager !is org.bukkit.entity.ElderGuardian) return
+        // Check if 凝望反制 is active (30s window after activation)
+        if (!com.waterful.project.career.skill.EurekaEffectHandler.isGuardianDefenseActive(p.uniqueId)) return
+        event.damage = maxOf(event.damage - 6.0, 0.1)
     }
 
     // ===== FARMER_MERCHANT base: 村庄中生命恢复I =====
@@ -823,16 +1046,98 @@ class PassiveSkillListener : Listener {
         }
     }
 
-    // ===== ARCHITECT_STRUCTURE skill 0 (高效回收): flint&steel always works, explosion reduction =====
+    // ===== ARCHITECT_STRUCTURE skill 0 (高效回收): decorative/dyed/glass block drops =====
+
+    // Decorative blocks (Lv.1): bells, bookshelves, lanterns, barrels, item frames, etc.
+    private val decorativeBlocks = setOf(
+        Material.BELL, Material.CHISELED_BOOKSHELF, Material.FLETCHING_TABLE,
+        Material.JUKEBOX, Material.LECTERN, Material.LODESTONE, Material.RESPAWN_ANCHOR,
+        Material.END_ROD, Material.LOOM, Material.LANTERN, Material.SOUL_LANTERN,
+        Material.BARREL, Material.ENDER_CHEST, Material.SHULKER_BOX,
+        Material.WHITE_SHULKER_BOX, Material.ORANGE_SHULKER_BOX, Material.MAGENTA_SHULKER_BOX,
+        Material.LIGHT_BLUE_SHULKER_BOX, Material.YELLOW_SHULKER_BOX, Material.LIME_SHULKER_BOX,
+        Material.PINK_SHULKER_BOX, Material.GRAY_SHULKER_BOX, Material.LIGHT_GRAY_SHULKER_BOX,
+        Material.CYAN_SHULKER_BOX, Material.PURPLE_SHULKER_BOX, Material.BLUE_SHULKER_BOX,
+        Material.BROWN_SHULKER_BOX, Material.GREEN_SHULKER_BOX, Material.RED_SHULKER_BOX,
+        Material.BLACK_SHULKER_BOX, Material.BOOKSHELF, Material.ITEM_FRAME, Material.GLOW_ITEM_FRAME,
+        Material.WHITE_BANNER, Material.ORANGE_BANNER, Material.MAGENTA_BANNER,
+        Material.LIGHT_BLUE_BANNER, Material.YELLOW_BANNER, Material.LIME_BANNER,
+        Material.PINK_BANNER, Material.GRAY_BANNER, Material.LIGHT_GRAY_BANNER,
+        Material.CYAN_BANNER, Material.PURPLE_BANNER, Material.BLUE_BANNER,
+        Material.BROWN_BANNER, Material.GREEN_BANNER, Material.RED_BANNER, Material.BLACK_BANNER,
+        Material.WHITE_CARPET, Material.ORANGE_CARPET, Material.MAGENTA_CARPET,
+        Material.LIGHT_BLUE_CARPET, Material.YELLOW_CARPET, Material.LIME_CARPET,
+        Material.PINK_CARPET, Material.GRAY_CARPET, Material.LIGHT_GRAY_CARPET,
+        Material.CYAN_CARPET, Material.PURPLE_CARPET, Material.BLUE_CARPET,
+        Material.BROWN_CARPET, Material.GREEN_CARPET, Material.RED_CARPET, Material.BLACK_CARPET,
+        Material.SCAFFOLDING, Material.NOTE_BLOCK
+    )
+    // Dyed blocks (Lv.2): colored concrete, terracotta, wool, glass
+    private val dyedBlocks: Set<Material> by lazy {
+        Material.entries.filter { it.name.startsWith("WHITE_") || it.name.startsWith("ORANGE_") ||
+            it.name.startsWith("MAGENTA_") || it.name.startsWith("LIGHT_BLUE_") ||
+            it.name.startsWith("YELLOW_") || it.name.startsWith("LIME_") ||
+            it.name.startsWith("PINK_") || it.name.startsWith("GRAY_") && !it.name.startsWith("GRAY_") == false ||
+            it.name.startsWith("LIGHT_GRAY_") || it.name.startsWith("CYAN_") ||
+            it.name.startsWith("PURPLE_") || it.name.startsWith("BLUE_") ||
+            it.name.startsWith("BROWN_") || it.name.startsWith("GREEN_") ||
+            it.name.startsWith("RED_") || it.name.startsWith("BLACK_")
+        }.filter { it.name.contains("CONCRETE") || it.name.contains("TERRACOTTA") ||
+            it.name.contains("WOOL") || it.name.contains("STAINED_GLASS") || it.name.contains("GLAZED") ||
+            it.name.contains("CANDLE") || it.name.contains("BED") }.toSet()
+    }
+    // Glass blocks (Lv.3)
+    private val glassBlocks = setOf(
+        Material.GLASS, Material.GLASS_PANE, Material.TINTED_GLASS,
+        Material.WHITE_STAINED_GLASS, Material.ORANGE_STAINED_GLASS, Material.MAGENTA_STAINED_GLASS,
+        Material.LIGHT_BLUE_STAINED_GLASS, Material.YELLOW_STAINED_GLASS, Material.LIME_STAINED_GLASS,
+        Material.PINK_STAINED_GLASS, Material.GRAY_STAINED_GLASS, Material.LIGHT_GRAY_STAINED_GLASS,
+        Material.CYAN_STAINED_GLASS, Material.PURPLE_STAINED_GLASS, Material.BLUE_STAINED_GLASS,
+        Material.BROWN_STAINED_GLASS, Material.GREEN_STAINED_GLASS, Material.RED_STAINED_GLASS,
+        Material.BLACK_STAINED_GLASS,
+        Material.WHITE_STAINED_GLASS_PANE, Material.ORANGE_STAINED_GLASS_PANE, Material.MAGENTA_STAINED_GLASS_PANE,
+        Material.LIGHT_BLUE_STAINED_GLASS_PANE, Material.YELLOW_STAINED_GLASS_PANE, Material.LIME_STAINED_GLASS_PANE,
+        Material.PINK_STAINED_GLASS_PANE, Material.GRAY_STAINED_GLASS_PANE, Material.LIGHT_GRAY_STAINED_GLASS_PANE,
+        Material.CYAN_STAINED_GLASS_PANE, Material.PURPLE_STAINED_GLASS_PANE, Material.BLUE_STAINED_GLASS_PANE,
+        Material.BROWN_STAINED_GLASS_PANE, Material.GREEN_STAINED_GLASS_PANE, Material.RED_STAINED_GLASS_PANE,
+        Material.BLACK_STAINED_GLASS_PANE
+    )
 
     @EventHandler
-    fun onExplosionDamage(event: org.bukkit.event.entity.EntityDamageEvent) {
-        if (event.entity !is Player || event.cause != org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_EXPLOSION && event.cause != org.bukkit.event.entity.EntityDamageEvent.DamageCause.BLOCK_EXPLOSION) return
-        val p = event.entity as Player
+    fun onBreakStructureBlock(event: org.bukkit.event.block.BlockBreakEvent) {
+        val p = event.player
         if (!p.hasBranch(Branch.ARCHITECT_STRUCTURE)) return
         val lv = p.skillLevel(Branch.ARCHITECT_STRUCTURE, 0)
         if (lv < 1) return
-        event.damage = event.damage * 0.8 // 20% reduction
+        val block = event.block.type
+        val eligible = (lv >= 1 && block in decorativeBlocks) ||
+            (lv >= 2 && block in dyedBlocks) ||
+            (lv >= 3 && block in glassBlocks)
+        if (eligible) {
+            event.isDropItems = true // Ensure drops happen (override other gating)
+        }
+    }
+
+    // ===== ARCHITECT_STRUCTURE eureka 0 (奇珍颜料): 20% dye drop on dyed block break =====
+
+    @EventHandler
+    fun onRarePigment(event: org.bukkit.event.block.BlockBreakEvent) {
+        val p = event.player
+        if (!p.hasEureka(Branch.ARCHITECT_STRUCTURE, 0)) return
+        val block = event.block.type
+        if (block !in dyedBlocks) return
+        if (!p.roll(20, "奇珍颜料 ${block.name}")) return
+        // Map dyed block to dye
+        val dye = blockToDye(block) ?: return
+        event.block.world.dropItemNaturally(event.block.location, org.bukkit.inventory.ItemStack(dye, 1))
+    }
+
+    private fun blockToDye(block: Material): Material? {
+        val name = block.name
+        val color = listOf("WHITE","ORANGE","MAGENTA","LIGHT_BLUE","YELLOW","LIME",
+            "PINK","GRAY","LIGHT_GRAY","CYAN","PURPLE","BLUE","BROWN","GREEN","RED","BLACK")
+            .firstOrNull { name.startsWith(it) } ?: return null
+        return Material.entries.firstOrNull { it.name == "${color}_DYE" }
     }
 
     // ===== ARCHITECT_DEMOLITION skill 0 (稳定三硝基甲苯): TNT crafting reliability =====
@@ -848,7 +1153,24 @@ class PassiveSkillListener : Listener {
         // Lv.1: 25% explosion, Lv.2: 10% explosion - these are negative effects we skip
     }
 
-    // ===== CHEF_BREWER skill 0 (熟练配制): brewing stand duration bonus =====
+    // ===== CHEF_BUTCHER base: eating cooked meat +4 food level =====
+
+    private val cookedMeats = setOf(
+        Material.COOKED_BEEF, Material.COOKED_PORKCHOP, Material.COOKED_CHICKEN,
+        Material.COOKED_MUTTON, Material.COOKED_RABBIT, Material.COOKED_COD,
+        Material.COOKED_SALMON
+    )
+
+    @EventHandler
+    fun onButcherEat(event: PlayerItemConsumeEvent) {
+        val p = event.player
+        if (!p.hasBranch(Branch.CHEF_BUTCHER)) return
+        if (event.item.type in cookedMeats) {
+            p.foodLevel = (p.foodLevel + 4).coerceAtMost(20)
+        }
+    }
+
+    // ===== CHEF_BREWER skill 0 (熟练配制): extend potion duration =====
 
     @EventHandler
     fun onBrew(event: org.bukkit.event.inventory.BrewEvent) {
@@ -858,22 +1180,101 @@ class PassiveSkillListener : Listener {
             if (!p.hasBranch(Branch.CHEF_BREWER)) continue
             val lv = p.skillLevel(Branch.CHEF_BREWER, 0)
             if (lv < 1) continue
-            // Modify brewing time by extending the fuel (approximate via ingredient)
-            val bonus = when (lv) { 1 -> 20; 2 -> 40; 3 -> 60; else -> 0 }
-            event.contents.ingredient?.amount = (event.contents.ingredient?.amount ?: 0) + 1
+            // Extend potion duration: modify each output slot
+            var extended = false
+            for (i in 0..2) {
+                val item = event.contents.getItem(i) ?: continue
+                if (item.type != Material.POTION && item.type != Material.SPLASH_POTION &&
+                    item.type != Material.LINGERING_POTION) continue
+                item.editMeta { meta ->
+                    if (meta is org.bukkit.inventory.meta.PotionMeta) {
+                        val baseType = meta.basePotionType ?: return@editMeta
+                        val hasRedstone = baseType.name.contains("LONG")
+                        val newType = baseType // Keep same type, duration bonus is separate
+                        // Add custom effect to extend duration (20s/40s/60s bonus)
+                        val bonusSeconds = if (hasRedstone) when (lv) { 1 -> 30; 2 -> 40; 3 -> 60; else -> 0 }
+                            else when (lv) { 1 -> 20; 2 -> 20; 3 -> 40; else -> 0 }
+                        // The duration extension is applied via the potion's existing effects
+                        meta.customEffects.forEach { effect ->
+                            meta.addCustomEffect(
+                                org.bukkit.potion.PotionEffect(
+                                    effect.type,
+                                    effect.duration + bonusSeconds * 20,
+                                    effect.amplifier,
+                                    effect.isAmbient,
+                                    effect.hasParticles(),
+                                    effect.hasIcon()
+                                ), true
+                            )
+                        }
+                        extended = true
+                    }
+                }
+            }
+            if (extended) p.sendMessage("§a✦ 熟练配制：药水持续时间延长")
         }
     }
 
-    // ===== FARMER_FISHERMAN skill 0 (垂钓熟手): fishing bonus =====
+    // ===== CHEF_BREWER skill 1 (蒸发控件): active 60s → brew drops blaze powder =====
+    @EventHandler
+    fun onBrewBlazeDrop(event: org.bukkit.event.inventory.BrewEvent) {
+        val loc = event.block.location
+        for (p in loc.getNearbyPlayers(3.0)) {
+            if (!p.hasBranch(Branch.CHEF_BREWER)) continue
+            val bonus = com.waterful.project.career.skill.SkillExecutor.getZhengFaBonus(p)
+            if (bonus <= 0) continue
+            if (p.roll(bonus, "蒸发控件·烈焰粉掉落(${bonus}%)")) {
+                event.block.world.dropItemNaturally(event.block.location,
+                    org.bukkit.inventory.ItemStack(Material.BLAZE_POWDER, 1))
+                p.sendMessage("§a✦ 蒸发控件：获得烈焰粉")
+            }
+        }
+    }
+
+    // ===== FARMER_FISHERMAN skill 0 (垂钓熟手): fishing QTE reduction + Luck =====
 
     @EventHandler
     fun onFish(event: org.bukkit.event.player.PlayerFishEvent) {
-        if (event.state != org.bukkit.event.player.PlayerFishEvent.State.CAUGHT_FISH) return
         val p = event.player
         if (!p.hasBranch(Branch.FARMER_FISHERMAN)) return
         val lv = p.skillLevel(Branch.FARMER_FISHERMAN, 0)
-        if (lv < 1) return
-        p.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.LUCK, 60 * 20, lv - 1, false, true))
+
+        when (event.state) {
+            org.bukkit.event.player.PlayerFishEvent.State.FISHING -> {
+                // 垂钓熟手: reduce wait time for bite (QTE difficulty reduction)
+                if (lv >= 1) {
+                    val hook = event.hook
+                    // Reduce max wait time by 20%/35%/50% per level
+                    val reduction = when (lv) { 1 -> 0.20; 2 -> 0.35; 3 -> 0.50; else -> 0.0 }
+                    val minWait = hook.minWaitTime
+                    val maxWait = hook.maxWaitTime
+                    val newMax = (maxWait * (1.0 - reduction)).toInt().coerceAtLeast(minWait + 20)
+                    hook.setWaitTime(minWait, newMax)
+                }
+            }
+            org.bukkit.event.player.PlayerFishEvent.State.CAUGHT_FISH -> {
+                // 垂钓熟手: QTE handled above; Luck I comes from base passive tick
+
+                // 收获涛声 (Skill 1): extra matching fish on next catch
+                val extraFish = com.waterful.project.career.skill.SkillExecutor.onShouHuoTaoShengCatch(p)
+                if (extraFish > 0 && event.caught != null) {
+                    val caught = event.caught!!
+                    if (caught is org.bukkit.entity.Item) {
+                        val stack = caught.itemStack
+                        val extraStack = org.bukkit.inventory.ItemStack(stack.type, extraFish)
+                        p.world.dropItemNaturally(p.location, extraStack)
+                        p.sendMessage("§a✦ 收获涛声：额外获得 ${extraFish} 条鱼！")
+                    }
+                }
+
+                // 授人以渔 (Eureka 1): extra 1~6 XP on each catch
+                if (p.hasEureka(Branch.FARMER_FISHERMAN, 1)) {
+                    val xp = (1..6).random()
+                    p.giveExp(xp)
+                }
+            }
+            else -> {}
+        }
     }
 
     // ===== 决战冲锋: custom damage bonus (vs-player) + shield silence =====
@@ -905,6 +1306,71 @@ class PassiveSkillListener : Listener {
         if (event.entity is org.bukkit.entity.Monster) {
             event.damage = event.damage * (1.0 + bonus)
         }
+    }
+
+    // ===== 血腥屠宰者 (Chef Butcher eureka 0): axe +25% dmg, +6 vs unarmored =====
+
+    @EventHandler
+    fun onBloodySlaughter(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
+        val damager = event.damager as? Player ?: return
+        if (!damager.hasEureka(Branch.CHEF_BUTCHER, 0)) return
+        val held = damager.inventory.itemInMainHand.type
+        if (!held.name.contains("AXE")) return
+        // +25% axe damage
+        event.damage = event.damage * 1.25
+        // +6 if target is unarmored
+        if (event.entity is org.bukkit.entity.LivingEntity) {
+            val living = event.entity as org.bukkit.entity.LivingEntity
+            val armor = living.equipment?.armorContents?.count { it != null && it.type != Material.AIR } ?: 0
+            if (armor == 0) {
+                event.damage += 6.0
+            }
+        }
+    }
+
+    // ===== 放血 (Chef Butcher eureka 1): axe crit on livestock → poison I; execute low-HP poisoned livestock =====
+
+    @EventHandler
+    fun onBloodletting(event: org.bukkit.event.entity.EntityDamageByEntityEvent) {
+        val damager = event.damager as? Player ?: return
+        if (!damager.hasEureka(Branch.CHEF_BUTCHER, 1)) return
+        val held = damager.inventory.itemInMainHand.type
+        if (!held.name.contains("AXE")) return
+        val target = event.entity
+        if (target !is org.bukkit.entity.Animals) return
+        if (target.type !in livestockTypes) return
+
+        // On critical hit: apply poison I (5s)
+        val isCrit = damager.fallDistance > 0.0f && !damager.isOnGround && !damager.isInWater &&
+            !damager.isInsideVehicle && !damager.isClimbing && !damager.isGliding
+        if (isCrit) {
+            target.addPotionEffect(PotionEffect(PotionEffectType.POISON, 5 * 20, 0, false, true))
+        }
+
+        // Execute check: nearby poisoned livestock below 50% HP
+        val playerLoc = damager.location
+        for (entity in playerLoc.getNearbyEntities(4.0, 4.0, 4.0)) {
+            if (entity !is org.bukkit.entity.Animals) continue
+            if (entity.type !in livestockTypes) continue
+            if (!entity.hasPotionEffect(PotionEffectType.POISON)) continue
+            val maxHp = entity.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)?.value ?: 10.0
+            if (entity.health > maxHp * 0.5) continue
+            // Execute: set health to 0 directly (triggers death without damage recursion)
+            entity.health = 0.0
+            // Drop extra raw meat
+            rawMeat[entity.type]?.let { mat ->
+                entity.world.dropItemNaturally(entity.location, ItemStack(mat, 1))
+            }
+        }
+    }
+
+    // ===== 凌空创想: scaffolding boost on move =====
+
+    @EventHandler
+    fun onLingKongMove(event: org.bukkit.event.player.PlayerMoveEvent) {
+        val p = event.player
+        if (event.from.blockX == event.to?.blockX && event.from.blockY == event.to?.blockY && event.from.blockZ == event.to?.blockZ) return
+        SkillExecutor.tickLingKongChuangXiang(p)
     }
 
     // ===== 我即梦魇: reapply aura on player move =====

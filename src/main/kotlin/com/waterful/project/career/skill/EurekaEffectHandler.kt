@@ -18,50 +18,55 @@ object EurekaEffectHandler {
     fun execute(eurekaId: String, player: Player): Boolean {
         // Check cooldown
         val cp = CareerManager.getPlayer(player)
-        if (cp != null) {
-            val def = com.waterful.project.career.data.CareerDataLoader.getEureka(eurekaId)
-            if (def != null && def.cooldownSeconds > 0) {
-                val now = System.currentTimeMillis()
-                if (cp.isOnCooldown(eurekaId, def.cooldownSeconds, now)) {
-                    val remaining = cp.getRemainingCooldown(eurekaId, def.cooldownSeconds, now)
-                    player.sendMessage(Component.text("顿悟冷却中！剩余 ${remaining} 秒", NamedTextColor.RED))
-                    return false
-                }
-                cp.setCooldown(eurekaId, now)
+        val def = com.waterful.project.career.data.CareerDataLoader.getEureka(eurekaId)
+        if (cp != null && def != null && def.cooldownSeconds > 0) {
+            val now = System.currentTimeMillis()
+            if (cp.isOnCooldown(eurekaId, def.cooldownSeconds, now)) {
+                val remaining = cp.getRemainingCooldown(eurekaId, def.cooldownSeconds, now)
+                player.sendMessage(Component.text("顿悟冷却中！剩余 ${remaining} 秒", NamedTextColor.RED))
+                return false
             }
         }
 
-        return try {
+        val success = try {
             when (eurekaId) {
-                "scholar_enchanter_eureka_1" -> openEnchantingTable(player)
-                "architect_fortress_eureka_2" -> openStonecutter(player)
-                "architect_traffic_eureka_2" -> applyDolphinGrace(player)
-                "architect_demolition_eureka_2" -> applyTntArrows(player)
-                "farmer_fisherman_eureka_0" -> applyOceanResistance(player)
-                "farmer_fisherman_eureka_1" -> applyFishingExp(player)
-                "warrior_weapon_eureka_0" -> applyTridentMastery(player)
-                "warrior_weapon_eureka_1" -> applyPiercingArrow(player)
-                "scholar_teacher_eureka_0" -> applyTeacherExp(player)
-                "farmer_fisherman_eureka_2" -> applyGuardianDefense(player)
-                "worker_lumberjack_eureka_0" -> giveScaffolding(player)
-                "worker_lumberjack_eureka_1" -> extinguishFires(player)
-                "worker_miner_eureka_0" -> applyCaveBuff(player)
-                "worker_miner_eureka_1" -> applyDarkAdapt(player)
-                "worker_miner_eureka_2" -> locateOres(player)
-                "scholar_redstone_eureka_1" -> targetedPulse(player)
-                "scholar_redstone_eureka_0" -> redstoneTorchConvert(player)
-                "warrior_soldier_eureka_1" -> applyFearlessThrust(player)
-                "warrior_hunter_eureka_2" -> applyHolySpring(player)
+                "scholar_enchanter_eureka_1" -> { openEnchantingTable(player); true }
+                "architect_fortress_eureka_2" -> { openStonecutter(player); true }
+                "architect_traffic_eureka_2" -> { applyDolphinGrace(player); true }
+                "architect_demolition_eureka_2" -> { applyTntArrows(player); true }
+                "farmer_fisherman_eureka_1" -> { applyFishingExp(player); true }
+                "warrior_weapon_eureka_0" -> { applyTridentMastery(player); true }
+                "farmer_fisherman_eureka_2" -> { applyGuardianDefense(player); true }
+                "worker_lumberjack_eureka_0" -> { giveScaffolding(player); true }
+                "worker_miner_eureka_0" -> { applyCaveBuff(player); true }
+                "worker_miner_eureka_1" -> { applyDarkAdapt(player); true }
+                "worker_miner_eureka_2" -> { locateOres(player); true }
+                "scholar_redstone_eureka_1" -> { targetedPulse(player); true }
+                "scholar_redstone_eureka_0" -> { redstoneTorchConvert(player); true }
+                "warrior_soldier_eureka_1" -> { applyFearlessThrust(player); true }
+                "warrior_hunter_eureka_2" -> { applyHolySpring(player); true }
+                "chef_master_eureka_1" -> { applyRecipeLegacy(player); true }
+                "chef_butcher_eureka_2" -> { applyPursuit(player); true }
+                "chef_brewer_eureka_1" -> { applyOverdose(player); true }
+                "farmer_merchant_eureka_2" -> { applyInvestmentVision(player); true }
+                "warrior_weapon_eureka_1" -> { applyPiercingArrow(player); true }
+                "scholar_teacher_eureka_0" -> { applyTeacherExp(player); true }
+                "worker_lumberjack_eureka_1" -> { extinguishFires(player); true }
                 else -> {
                     player.sendMessage(Component.text("该顿悟无需主动触发", NamedTextColor.GRAY))
-                    return false
+                    false
                 }
             }
-            true
         } catch (e: Exception) {
             player.sendMessage(Component.text("顿悟执行出错: ${e.message}", NamedTextColor.RED))
             false
         }
+
+        // Only set cooldown on success (conditional eurekas like 骇浪征服者 may fail)
+        if (success && cp != null && def != null && def.cooldownSeconds > 0) {
+            cp.setCooldown(eurekaId, System.currentTimeMillis())
+        }
+        return success
     }
 
     // ===== 无畏突刺: 60秒内挥剑/斧向前突进 =====
@@ -203,17 +208,18 @@ object EurekaEffectHandler {
         return true // Already tracked = our TNT
     }
 
-    private fun applyOceanResistance(player: Player) {
+    private fun applyOceanResistance(player: Player): Boolean {
         val world = player.world
         if (world.hasStorm() || world.isThundering) {
             val biome = player.location.block.biome
             if (biome.toString().contains("OCEAN")) {
                 player.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE, 60 * 20, 1, false, true))
                 player.sendMessage(Component.text("§5✦ 骇浪征服者：抗性提升II"))
-                return
+                return true
             }
         }
         player.sendMessage(Component.text("§7骇浪征服者：需要在降水/雷暴天气的海洋中"))
+        return false
     }
 
     private fun applyFishingExp(player: Player) {
@@ -240,9 +246,142 @@ object EurekaEffectHandler {
         }
     }
 
+    private val guardianDefensePlayers = mutableMapOf<java.util.UUID, Long>()
+
+    /** Clear all eureka tracking data for a player (called on branch forget) */
+    fun clearPlayerTracking(uuid: java.util.UUID) {
+        fearlessThrustPlayers.remove(uuid)
+        fearlessThrustLastDash.remove(uuid)
+        guardianDefensePlayers.remove(uuid)
+        tntArrowPlayers.remove(uuid)
+        pursuitTargets.entries.removeAll { it.value == uuid }
+    }
+
+    // ===== 追猎 (Butcher eureka 2): target mob → debuff 60s → kill reward 25xp =====
+    private val pursuitTargets = mutableMapOf<java.util.UUID, java.util.UUID>() // mobUuid -> playerUuid
+
+    private fun applyPursuit(player: Player) {
+        val target = player.getTargetEntity(10) ?: run {
+            player.sendMessage(Component.text("§c追猎：请对准一个生物！"))
+            return
+        }
+        if (target !is org.bukkit.entity.LivingEntity || target is Player) {
+            player.sendMessage(Component.text("§c追猎：不能对玩家使用！"))
+            return
+        }
+        target.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.GLOWING, 60 * 20, 0, false, true))
+        target.addPotionEffect(org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.WEAKNESS, 60 * 20, 1, false, true))
+        pursuitTargets[target.uniqueId] = player.uniqueId
+        player.sendMessage(Component.text("§5✦ 追猎：已标记 ${target.name}，击杀后获得25经验值"))
+    }
+
+    fun onPursuitKill(entity: org.bukkit.entity.LivingEntity, killer: Player): Boolean {
+        val marker = pursuitTargets.remove(entity.uniqueId) ?: return false
+        if (marker != killer.uniqueId) return false
+        killer.giveExp(25)
+        killer.sendMessage(Component.text("§5✦ 追猎：击杀标记目标，获得25经验值！"))
+        return true
+    }
+
+    // ===== 投资远见 (Merchant eureka 2): track purchases 5min, reward emeralds =====
+    private val investmentPlayers = mutableMapOf<java.util.UUID, Pair<Long, Int>>() // UUID -> (expiry, totalSpent)
+
+    private fun applyInvestmentVision(player: Player) {
+        investmentPlayers[player.uniqueId] = System.currentTimeMillis() + 5 * 60_000L to 0
+        player.sendMessage(Component.text("§5✦ 投资远见：持续5分钟，记录购买花费的绿宝石"))
+    }
+
+    /** Called from trade handler: add emerald cost to tracking */
+    fun onInvestmentTrade(player: Player, emeraldCost: Int) {
+        val (expiry, spent) = investmentPlayers[player.uniqueId] ?: return
+        if (System.currentTimeMillis() > expiry) { investmentPlayers.remove(player.uniqueId); return }
+        investmentPlayers[player.uniqueId] = expiry to (spent + emeraldCost)
+    }
+
+    /** Called periodically or at expiry: check and reward */
+    fun tickInvestmentVision() {
+        val now = System.currentTimeMillis()
+        val toProcess = mutableListOf<java.util.UUID>()
+        for ((uuid, data) in investmentPlayers) {
+            if (now > data.first) toProcess.add(uuid)
+        }
+        for (uuid in toProcess) {
+            val (_, spent) = investmentPlayers.remove(uuid) ?: continue
+            if (spent <= 0) continue
+            val player = org.bukkit.Bukkit.getPlayer(uuid) ?: continue
+            val multiplier = 0.5 + Math.random() * 1.25 // 0.5 ~ 1.75
+            val reward = (spent * multiplier).toInt().coerceAtLeast(1)
+            player.inventory.addItem(org.bukkit.inventory.ItemStack(org.bukkit.Material.EMERALD, reward))
+            player.sendMessage(Component.text("§5✦ 投资远见：花费${spent}绿宝石，获得${reward}绿宝石回报！"))
+        }
+    }
+
+    // ===== 过量服用 (Brewer eureka 1): boost all effects +1 lv for 60s, then 8s poison II =====
+    private fun applyOverdose(player: Player) {
+        var boosted = 0
+        for (effect in player.activePotionEffects) {
+            val currentAmp = effect.amplifier
+            val currentDur = effect.duration
+            val type = effect.type
+            // Remove old, add boosted version (cap at amplifier 4 = level V)
+            player.removePotionEffect(type)
+            val newAmp = (currentAmp + 1).coerceAtMost(4)
+            if (currentDur > 60 * 20) {
+                // If effect lasts longer than 60s, keep boosted for full remaining duration
+                player.addPotionEffect(org.bukkit.potion.PotionEffect(type, currentDur, newAmp, effect.isAmbient, effect.hasParticles(), effect.hasIcon()))
+            } else {
+                // Boost for at least 60s
+                player.addPotionEffect(org.bukkit.potion.PotionEffect(type, 60 * 20, newAmp, effect.isAmbient, effect.hasParticles(), effect.hasIcon()))
+            }
+            boosted++
+        }
+        player.sendMessage(Component.text("§5✦ 过量服用：${boosted}个效果等级+1，持续60秒"))
+
+        // After 60s: apply poison II for 8s
+        val plugin = org.bukkit.Bukkit.getPluginManager().getPlugin("StarLightRe") ?: return
+        org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+            player.addPotionEffect(org.bukkit.potion.PotionEffect(
+                org.bukkit.potion.PotionEffectType.POISON, 8 * 20, 1, false, true, true))
+            player.sendMessage(Component.text("§c过量服用结束：中毒II 8秒"))
+        }, 60 * 20L)
+    }
+
+    // ===== 地狱厨房: 周围8格所有Chef职业玩家CD-20 =====
+    private fun applyRecipeLegacy(player: Player) {
+        var count = 0
+        for (nearby in player.location.getNearbyPlayers(8.0)) {
+            val cp = CareerManager.getPlayer(nearby) ?: continue
+            val hasChefClass = cp.selectedClasses.any { it.name.startsWith("CHEF") } ||
+                cp.unlockedBranches.keys.any { it.careerClass.name.startsWith("CHEF") }
+            if (!hasChefClass) continue
+            // Reduce all skill cooldowns by 20 seconds (only for skills, not eurekas)
+            val toReduce = mutableListOf<String>()
+            for ((key, lastUsed) in cp.cooldowns) {
+                if (key.contains("_skill_") && !key.contains("_eureka_")) {
+                    toReduce.add(key)
+                }
+            }
+            for (key in toReduce) {
+                val old = cp.cooldowns[key] ?: continue
+                cp.cooldowns[key] = old - 20_000L // 20 seconds earlier
+            }
+            count++
+            nearby.sendMessage(Component.text("§5✦ 地狱厨房：${player.name} 使你的技能冷却减少20秒！"))
+        }
+        player.sendMessage(Component.text("§5✦ 地狱厨房：影响了${count}个厨师职业玩家的冷却"))
+    }
+
     private fun applyGuardianDefense(player: Player) {
         player.removePotionEffect(org.bukkit.potion.PotionEffectType.MINING_FATIGUE)
-        player.sendMessage(Component.text("§5✦ 凝望反制：清除挖掘疲劳，守卫者伤害-6"))
+        guardianDefensePlayers[player.uniqueId] = System.currentTimeMillis() + 30_000L
+        player.sendMessage(Component.text("§5✦ 凝望反制：清除挖掘疲劳，持续30秒内守卫者伤害-6"))
+    }
+
+    /** Check if 凝望反制 is currently active for this player */
+    fun isGuardianDefenseActive(uuid: java.util.UUID): Boolean {
+        val expiry = guardianDefensePlayers[uuid] ?: return false
+        if (System.currentTimeMillis() > expiry) { guardianDefensePlayers.remove(uuid); return false }
+        return true
     }
 
     private fun giveScaffolding(player: Player) {
